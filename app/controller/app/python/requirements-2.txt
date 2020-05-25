@@ -1,2 +1,3 @@
 # AI Gym
-gym[all]
+#gym[all]
+gym

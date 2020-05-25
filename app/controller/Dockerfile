@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -16,7 +16,7 @@ RUN apt-get update \
         zlib1g-dev \
         libjpeg-dev \
         xvfb \
-        libav-tools \
+        ffmpeg \
         xorg-dev \
         libboost-all-dev \
         libsdl2-dev \
@@ -27,13 +27,18 @@ RUN apt-get update \
         python3-pip  \
         python3-setuptools  \
         python3-wheel  \
+        python3-numpy \
+        python3-scipy \
         python3-tk \
         libopenblas-base  \
-        libatlas-dev  \
+        libatlas-base-dev \
         cython3  \
      && apt-get clean \
      && rm -rf /var/lib/apt/lists/* && \
   python3 -m pip install --upgrade pip && \
+  pip install cffi && \
+  pip install Cython && \
+  pip install lockfile && \
   python3 -m pip install -r /app/python/requirements-1.txt
 
 RUN python3 -m pip install -r /app/python/requirements-2.txt 

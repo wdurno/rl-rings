@@ -5,11 +5,11 @@ scipy
 matplotlib 
 
 # Deep learning
-tensorflow 
+tensorflow<2
 keras 
 h5py 
 keras-rl
-baselines
+#baselines
 tensorforce
 
 # AI Gym requirements
