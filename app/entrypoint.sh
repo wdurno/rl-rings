@@ -1,6 +1,6 @@
-export _JOB=$1
+_JOB=$1
 # Override JOB if arg given 
-if [ -z "$var" ]; then echo "JOB=$JOB"; else export JOB=$_JOB; fi
+if [ -z "$_JOB" ]; then echo "JOB=$JOB"; else export JOB=$_JOB; fi
 
 source config.sh 
 gcloud auth activate-service-account $RL_HYPOTHESIS_2_SERVICE_ACCOUNT_NAME --key-file service-account.json 
