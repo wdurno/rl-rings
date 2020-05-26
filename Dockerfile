@@ -24,7 +24,11 @@ RUN apk --update --no-cache add \
     gcloud config set component_manager/disable_update_check true && \
     gcloud config set metrics/environment github_docker_image && \
     gcloud --version && \
-    rm -rf /tmp/* && rm -rf /opt/google-cloud-sdk/.install/.backup 
+    rm -rf /tmp/* && rm -rf /opt/google-cloud-sdk/.install/.backup && \
+    # kubectl 
+    cd /bin && \
+    curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl && \
+    chmod +x kubectl 
 
 ADD app /app
 
