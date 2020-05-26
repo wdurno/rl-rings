@@ -1,4 +1,4 @@
-export RL_HYPOTHESIS_2_DOCKER_IMAGE_VERSION=0.0.2
+export RL_HYPOTHESIS_2_DOCKER_IMAGE_VERSION=0.0.3
 export RL_HYPOTHESIS_2_DOCKER_REGISTRY_HEAD=gcr.io/gdax-dnn/
 export RL_HYPOTHESIS_2_DOCKER_BUILDER_IMAGE=${RL_HYPOTHESIS_2_DOCKER_REGISTRY_HEAD}rl-hypothesis-2:builder-${RL_HYPOTHESIS_2_DOCKER_IMAGE_VERSION}
 export RL_HYPOTHESIS_2_DOCKER_CONTROLLER_IMAGE=${RL_HYPOTHESIS_2_DOCKER_REGISTRY_HEAD}rl-hypothesis-2:controller-${RL_HYPOTHESIS_2_DOCKER_IMAGE_VERSION}
@@ -10,3 +10,4 @@ export RL_HYPOTHESIS_2_NETOWRK=projects/gdax-dnn/global/networks/default
 export RL_HYPOTHESIS_2_SUBNETWORK=projects/gdax-dnn/regions/us-central1/subnetworks/default
 export RL_HYPOTHESIS_2_PROJECT=gdax-dnn
 export RL_HYPOTHESIS_2_ZONE=us-central1-a
+export RL_HYPOTHESIS_2_GIT_REPO=https://github.com/wdurno/rl-hypothesis-2.git

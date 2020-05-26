@@ -181,6 +181,8 @@ def main():
 
 	cur_state = env.reset()
 	action = env.action_space.sample()
+        iters = 1 
+        total_reward = 0. 
 	while True:
 		env.render()
 		cur_state = cur_state.reshape((1, env.observation_space.shape[0]))
@@ -190,10 +192,14 @@ def main():
 		new_state, reward, done, _ = env.step(action)
 		new_state = new_state.reshape((1, env.observation_space.shape[0]))
 
+                total_reward += reward 
+                print('metric: '+str(reward/iters)) 
+
 		actor_critic.remember(cur_state, action, reward, new_state, done)
 		actor_critic.train()
 
 		cur_state = new_state
+                iters += 1 
 
 if __name__ == "__main__":
 	main()

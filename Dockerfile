@@ -15,6 +15,8 @@ RUN apk --update --no-cache add \
         python \
         python3 \
         gettext \
+        git \
+        vim \
         openjdk8 && \
     wget -O - -q "${GCLOUD_SDK_URL}" | tar zxf - -C /opt && \
     ln -s /lib /lib64 && \

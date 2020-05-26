@@ -8,7 +8,9 @@ spec:
         image: $RL_HYPOTHESIS_2_DOCKER_BUILDER_IMAGE 
         env: 
           - name: JOB
-            value: $RL_HYPOTHESIS_1_JOB 
+            value: 0-in
+          - name: RL_HYPOTHESIS_2_JOB_ID
+            value: "$RL_HYPOTHESIS_2_JOB_ID"
         securityContext: 
             privileged: true 
         volumeMounts: 
