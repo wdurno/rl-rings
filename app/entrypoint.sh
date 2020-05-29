@@ -14,6 +14,6 @@ fi
 
 if [ $JOB == "5-bu" ]; then
 	echo Attempting controller image build...
-	cd /app/controller
+	cd /app/docker/controller
 	source docker-build.sh 
 fi
