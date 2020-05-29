@@ -6,4 +6,4 @@ export RL_HYPOTHESIS_2_JOB=k8s
 export RL_HYPOTHESIS_2_INSTANCE=x${RL_HYPOTHESIS_2_JOB}-${RL_HYPOTHESIS_2_JOB_ID}
 export RL_HYPOTHESIS_2_DOCKER_IMAGE=${RL_HYPOTHESIS_2_DOCKER_AI_IMAGE}
 ## run 
-cat app/controller/app/kubernetes/controller-pod.yaml | envsubst | kubectl apply -f -
+cat docker/controller/app/kubernetes/controller-pod.yaml | envsubst | kubectl apply -f -

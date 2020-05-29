@@ -7,4 +7,4 @@ export RL_HYPOTHESIS_2_INSTANCE=x${RL_HYPOTHESIS_2_JOB}-${RL_HYPOTHESIS_2_JOB_ID
 export RL_HYPOTHESIS_2_DOCKER_IMAGE=${RL_HYPOTHESIS_2_DOCKER_CONTROLLER_IMAGE}
 export RL_HYPOTHESIS_2_MACHINE_TYPE=e2-standard-2
 ## run 
-cat app/controller/app/kubernetes/builder-pod.yaml | envsubst | kubectl apply -f -
+cat docker/controller/app/kubernetes/builder-pod.yaml | envsubst | kubectl apply -f -
