@@ -3,8 +3,8 @@ _JOB=$1
 if [ -z "$_JOB" ]; then echo "JOB=$JOB"; else export JOB=$_JOB; fi
 
 source config.sh 
-gcloud auth activate-service-account $RL_HYPOTHESIS_2_SERVICE_ACCOUNT_NAME --key-file service-account.json 
-cat service-account.json | docker login -u _json_key --password-stdin https://gcr.io/gdax-dnn 
+gcloud auth activate-service-account $RL_HYPOTHESIS_2_SERVICE_ACCOUNT_NAME --key-file service-account.json || exit 1 
+cat service-account.json | docker login -u _json_key --password-stdin https://gcr.io/gdax-dnn || exit 1
 
 if [ $JOB == "0-in" ]; then
 	echo "Interactive mode..."
