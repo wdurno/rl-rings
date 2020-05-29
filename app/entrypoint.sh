@@ -14,6 +14,6 @@ fi
 
 if [ $JOB == "5-bu" ]; then
 	echo Attempting controller image build...
-	cd /app/docker/controller
+	cd /app/${RL_HYPOTHESIS_2_REPO_DIR_NAME}/docker/controller
 	source docker-build.sh 
 fi

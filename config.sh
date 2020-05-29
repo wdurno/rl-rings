@@ -11,3 +11,4 @@ export RL_HYPOTHESIS_2_SUBNETWORK=projects/gdax-dnn/regions/us-central1/subnetwo
 export RL_HYPOTHESIS_2_PROJECT=gdax-dnn
 export RL_HYPOTHESIS_2_ZONE=us-central1-a
 export RL_HYPOTHESIS_2_GIT_REPO=https://github.com/wdurno/rl-hypothesis-2.git
+export RL_HYPOTHESIS_2_REPO_DIR_NAME=rl-hypothesis-2
