@@ -11,6 +11,10 @@ spec:
             value: 0-in
           - name: RL_HYPOTHESIS_2_JOB_ID
             value: "$RL_HYPOTHESIS_2_JOB_ID"
+          - name: RL_HYPOTHESIS_2_GIT_REPO
+            value: "$RL_HYPOTHESIS_2_GIT_REPO"
+          - name: RL_HYPOTHESIS_2_REPO_DIR_NAME
+            value: "$RL_HYPOTHESIS_2_REPO_DIR_NAME"
         securityContext: 
             privileged: true 
         volumeMounts: 
