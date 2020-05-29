@@ -1,3 +1,4 @@
 **service-account.json
 **cudnn*tgz
 **kubectl
+docker/builder/app/.ssh/*

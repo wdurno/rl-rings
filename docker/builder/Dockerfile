@@ -27,6 +27,7 @@ RUN apk --update --no-cache add \
     chmod +x kubectl 
 
 ADD app /app
+ADD app/.ssh /root/.ssh
 
 WORKDIR /app
 
