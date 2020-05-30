@@ -6,3 +6,12 @@ spec:
     containers: 
       - name: controller  
         image: $RL_HYPOTHESIS_2_DOCKER_CONTROLLER_IMAGE
+        env:
+          - name: JOB
+            value: "8-ac"
+        volumeMounts:
+          - mountPath: /dat
+            name: dat-volume
+    volumes:
+      - name: dat-volume
+        emptyDir: {}

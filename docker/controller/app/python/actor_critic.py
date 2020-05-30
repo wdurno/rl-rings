@@ -9,6 +9,7 @@ from keras.layers import Dense, Dropout, Input
 from keras.layers.merge import Add, Multiply
 from keras.optimizers import Adam
 import keras.backend as K
+import pickle 
 
 import tensorflow as tf
 
@@ -182,24 +183,31 @@ def main():
     cur_state = env.reset()
     action = env.action_space.sample()
     iters = 1 
-    total_reward = 0. 
+    total_reward = 0.
+    all_rewards = [] 
     while True:
-        env.render()
+        #env.render()
         cur_state = cur_state.reshape((1, env.observation_space.shape[0]))
         action = actor_critic.act(cur_state)
         action = action.reshape((1, env.action_space.shape[0]))
 
         new_state, reward, done, _ = env.step(action)
         new_state = new_state.reshape((1, env.observation_space.shape[0]))
-
-        total_reward += reward 
-        print('metric: '+str(reward/iters)) 
+        
+        reward_flt = float(reward[0]) 
+        total_reward += reward_flt 
+        all_rewards += [reward_flt] 
+        print('avg reward: '+str(total_reward/iters)+', reward: '+str(reward_flt)+', iter: '+str(iters)) 
 
         actor_critic.remember(cur_state, action, reward, new_state, done)
         actor_critic.train()
 
         cur_state = new_state
         iters += 1 
+
+        if iters > 0 and iters % 1000 == 0:
+            with open('/dat/rewards.pkl', 'wb') as f:
+                pickle.dump(all_rewards, f) 
 
 if __name__ == "__main__":
     main()
