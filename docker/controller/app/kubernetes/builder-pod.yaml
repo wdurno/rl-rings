@@ -20,6 +20,10 @@ spec:
         volumeMounts: 
           - name: docker-graph-storage 
             mountPath: /var/lib/docker 
+          - name: dat-volume 
+            mountPath: /dat
     volumes: 
       - name: docker-graph-storage 
         emptyDir: {}
+      - name: dat-volume
+        emptyDir: {} 
