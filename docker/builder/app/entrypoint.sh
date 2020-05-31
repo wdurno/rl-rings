@@ -17,5 +17,5 @@ if [ $JOB == "0-in" ]; then
 fi
 
 if [ $JOB == "5-bu" ]; then
-	bash /app/scripts/build-controller.sh
+	bash /app/${RL_HYPOTHESIS_2_REPO_DIR_NAME}/docker/builder/app/scripts/build-controller.sh
 fi

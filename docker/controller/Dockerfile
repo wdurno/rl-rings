@@ -12,6 +12,9 @@ RUN apt-get update \
      && apt-get install -y --no-install-recommends \
         apt-utils \
         build-essential \
+	wget \
+	zip \
+	unzip \
 	vim \
         g++  \
         git  \
