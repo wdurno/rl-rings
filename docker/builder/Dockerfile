@@ -1,7 +1,7 @@
 FROM docker:dind
 
 ENV GCLOUD_SDK_URL="https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz" \
-    PATH="/opt/google-cloud-sdk/bin:/opt/spark/bin:/root/gsutil:${PATH}" 
+    PATH="/opt/google-cloud-sdk/bin:/root/gsutil:${PATH}" 
 
 RUN apk --update --no-cache add \
         bash \

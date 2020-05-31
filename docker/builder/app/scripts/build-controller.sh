@@ -1,0 +1,13 @@
+echo Attempting controller image build...
+echo Copying keys...
+cd /app
+cp $RL_HYPOTHESIS_2_SERVICE_ACCOUNT_JSON_PATH docker/controller/app/service-account.json
+cp config.sh docker/controller/app/config.sh 
+cp ~/.boto docker/controller/app/.boto
+cd /app/${RL_HYPOTHESIS_2_REPO_DIR_NAME}/docker/controller
+echo Executing build...
+source docker-build.sh
+echo Cleaning-up...
+cd /app
+rm docker/controller/app/service-account.json
+rm docker/controller/app/.boto
