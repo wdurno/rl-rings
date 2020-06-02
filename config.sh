@@ -14,3 +14,4 @@ export RL_HYPOTHESIS_2_GIT_REPO=git@github.com:wdurno/rl-hypothesis-2.git
 export RL_HYPOTHESIS_2_REPO_DIR_NAME=rl-hypothesis-2
 export RL_HYPOTHESIS_2_GIT_USER_NAME=wdurno
 export RL_HYPOTHESIS_2_GIT_USER_EMAIL=wdurno@gmail.com
+export RL_HYPOTHESIS_2_PRETRAIN_DATA=gs://gdax-dnn-tmp-1/minerl-1.tar.gz
