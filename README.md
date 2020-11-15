@@ -1,4 +1,8 @@
 # rl-hypothesis-2
 
-An attempt at large-scale transfer learning. Currently designing build environment.  
+Hypothesis: With sufficient data, reinforcement learning attains transferable generality, observable as one-shot learning. 
+
+## architecture 
+
+![arch1](notes/images/rl2-arch1.pdf)
 
