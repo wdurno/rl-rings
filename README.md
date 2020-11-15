@@ -4,5 +4,5 @@ Hypothesis: With sufficient data, reinforcement learning attains transferable ge
 
 ## architecture 
 
-![arch1](notes/images/rl2-arch1.pdf)
+![arch1](notes/images/rl2-arch1.png)
 
