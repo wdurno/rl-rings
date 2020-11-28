@@ -25,6 +25,8 @@ while not done:
         action['jump'] = 1
     elif c == ' ':
         action['attack'] = 1
+    elif c == 'x':
+        done = True
     ## all other actions are no-ops 
     ## apply action 
     obs, reward, done, info = env.step(action) 

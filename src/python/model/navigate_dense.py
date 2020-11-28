@@ -12,7 +12,7 @@ import torch.optim as optim
 
 from tensorboard import TensorBoard
 from deep_net import DQN
-from rpm import rpm
+from replay_memory import rpm
 from craft import envstep_done
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -244,10 +244,10 @@ def action_to(num):
         "camera": [0,0],
 
         "place": 0,
-        "craft": 0,
-        "equip": 1,
-        "nearbyCraft": 0,
-        "nearbySmelt": 0,
+        #"craft": 0,
+        #"equip": 1,
+        #"nearbyCraft": 0,
+        #"nearbySmelt": 0,
     }
     if num == 1:
         act['forward'] = 0
