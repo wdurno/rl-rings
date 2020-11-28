@@ -4,6 +4,8 @@ import random
 import torch
 import pickle as pickle
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 class rpm(object):
     # replay memory
     def __init__(self, buffer_size, rcsize=40):
@@ -57,7 +59,7 @@ class rpm(object):
                 self.push_ipt(tmp)
             self.clear_recent()
 
-    def sample(self, batch_size, device=torch.device("cuda"), only_state=False):
+    def sample(self, batch_size, device=device, only_state=False):
         if len(self.ipt_buffer) < 8:
             batch = random.sample(self.ipt_buffer, len(self.ipt_buffer))
         else:
@@ -106,7 +108,7 @@ class rpm_meta(object):
         if important:
             self.push_ipt(obj)
 
-    def sample(self, batch_size, device=torch.device("cuda"), only_state=False):
+    def sample(self, batch_size, device=device, only_state=False):
         if len(self.ipt_buffer) < 10:
             batch = random.sample(self.ipt_buffer, len(self.ipt_buffer))
         else:
