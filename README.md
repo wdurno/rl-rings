@@ -2,6 +2,12 @@
 
 Hypothesis: With sufficient data, reinforcement learning attains transferable generality, observable as one-shot learning. 
 
+## steup
+
+```
+bash build.sh --phase1
+```
+
 ## architecture 
 
 ![arch1](notes/images/rl2-arch1.png)

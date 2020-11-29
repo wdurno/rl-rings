@@ -8,5 +8,5 @@ variable "tenant_id" {
 
 variable "resource_group_name" { 
   type = string
-  default = "rl-hypothesis-2"
+  default = "rl_hypothesis_2"
 } 
