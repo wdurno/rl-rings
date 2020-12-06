@@ -9,7 +9,7 @@ Copy `rl-hypothesis-2-config.sh` to `$HOME` and enter values.
 ## steup
 
 ```
-bash build.sh --phase1
+bash build.sh --phase2
 ```
 
 ## clean up

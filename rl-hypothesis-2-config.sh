@@ -3,3 +3,4 @@
 
 export rl_hypothesis_2_subscription_id=""
 export rl_hypothesis_2_tenant_id=""
+export rl_hypothesis_2_resource_group_name=""
