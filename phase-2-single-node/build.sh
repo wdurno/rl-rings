@@ -13,5 +13,12 @@ fi
 echo -e ${GREEN}copying code into build dir...${NC} 
 cp -r ${repo_dir}/src app/src
 
-echo -e ${GREEN}Running Docker build...${NC} 
+echo -e ${GREEN}running docker build...${NC} 
+DOCKER_SERVER=$(cat secret/acr/server)
+DOCKER_TOKEN=$(cat secret/acr/token)
+IMAGE_NAME=${DOCKER_SERVER}/phase2:v0.0.1
+docker build -t ${IMAGE_NAME} .
 
+echo -e ${GREEN}pushing docker image to resgistry...${NC}
+cat ${DOCKER_TOKEN} | docker login ${DOCKER_SERVER} --username 00000000-0000-0000-0000-000000000000 --password-stdin
+docker push ${IMAGE_NAME}

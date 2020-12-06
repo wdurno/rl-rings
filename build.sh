@@ -13,12 +13,13 @@ if [ $? != 0 ]; then
   exit 1
 fi
 
-echo -e ${GREEN}procuring infrastructure...${NC}
-cd ${repo_dir}/terraform
+echo -e ${GREEN}procuring base infrastructure...${NC}
+cp ${repo_dir}/src/terraform/templates/* ${repo_dir}/src/terraform/state
+cd ${repo_dir}/src/terraform/state
 terraform init
 . terraform-apply.sh
 if [ $? != 0 ]; then
-  echo -e ${RED}failed to build infrastructure!${NC}
+  echo -e ${RED}failed to build base infrastructure!${NC}
   exit 1
 fi
 cd ${repo_dir} 
@@ -27,7 +28,7 @@ echo -e ${GREEN}docker login...${NC}
 . ${repo_dir}/secret/acr/get_acr_access_credentials.sh
 
 ## switching to python3 to handle build logic 
-python3 ${repo_dir}/src/python/build/build.py "$@"
+python3 ${repo_dir}/src/python/build/build.py $@
 
 if [ $? != 0 ]; then
   echo -e ${RED}failed to build!${NC}

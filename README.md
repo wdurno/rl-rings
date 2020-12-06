@@ -2,10 +2,20 @@
 
 Hypothesis: With sufficient data, reinforcement learning attains transferable generality, observable as one-shot learning. 
 
+## configure
+
+Copy `rl-hypothesis-2-config.sh` to `$HOME` and enter values. 
+
 ## steup
 
 ```
 bash build.sh --phase1
+```
+
+## clean up
+
+```
+bash build.sh --clean-up
 ```
 
 ## architecture 

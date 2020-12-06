@@ -1,4 +1,0 @@
-```
-. build.sh 
-. deploy.sh 
-```
