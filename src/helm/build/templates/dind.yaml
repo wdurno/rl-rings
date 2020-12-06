@@ -1,0 +1,27 @@
+apiVersion: v1 
+kind: Pod 
+metadata: 
+    name: build 
+spec: 
+    containers: 
+      - name: build
+        image: docker:19.03.12-dind
+        securityContext: 
+            privileged: true
+        env:
+          - name: repo_dir
+            value: "/build"
+        volumeMounts: 
+          - name: docker-graph-storage 
+            mountPath: /var/lib/docker 
+          - name: dat-volume 
+            mountPath: /dat
+          - name: build-dir
+            mountPath: /build
+    volumes: 
+      - name: docker-graph-storage 
+        emptyDir: {}
+      - name: dat-volume
+        emptyDir: {} 
+      - name: build-dir
+        emptyDir: {} 

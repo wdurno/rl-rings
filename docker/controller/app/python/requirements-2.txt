@@ -1,4 +1,0 @@
-# AI Gym
-#gym[all]
-gym
-minerl
