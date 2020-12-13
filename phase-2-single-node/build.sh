@@ -18,7 +18,7 @@ cp -r ${repo_dir}/src ${BUILD_DIR}/app/src
 echo -e ${GREEN}running docker build...${NC} 
 DOCKER_SERVER=$(cat ${repo_dir}/secret/acr/server)
 DOCKER_TOKEN=$(cat ${repo_dir}/secret/acr/token)
-IMAGE_NAME=${DOCKER_SERVER}/phase2:v0.0.1
+IMAGE_NAME=${DOCKER_SERVER}/phase-2:v0.0.1
 docker build -t ${IMAGE_NAME} ${BUILD_DIR}
 
 if [ $? != 0 ]; then

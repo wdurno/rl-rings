@@ -1,0 +1,14 @@
+apiVersion: v1 
+kind: Pod 
+metadata: 
+    name: {{ .Values.name }} 
+    labels:
+      name: {{ .Values.name }} 
+spec: 
+    containers: 
+      - name: build
+        image: {{ Values.docker_server }}/phase-2:v0.0.1
+        command: ["bash", "/app/src/scripts/run-navigate-dense.sh"] 
+        imagePullSecrets:
+          - name: acr-creds
+        imagePullPolicy: Always

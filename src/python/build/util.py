@@ -60,7 +60,34 @@ def copy_to_pod(pod_name='build-1', src=repo_dir, dst='/build'):
 
 def build_phase_2_container(pod_name='build-1'): 
     'executes build on remote pod'
+    ## `repo_dir` not referenced, because local `repo_dir` is different from build env `repo_dir`
+    ## so, it is hard-coded as `/build/rl-hypothesis-2`
     cmd = f'kubectl exec -it {pod_name} -- sh /build/rl-hypothesis-2/phase-2-single-node/build.sh'
     run(cmd) 
     pass
+
+def helm_deploy_phase_2_pod(name='phase-2'): 
+    'deploys phase 2 pod for single-node AI processing'
+    cmd = f'helm upgrade {name} {repo_dir}/phase-2 --install'
+    run(cmd) 
+    pass
+
+def deploy_acr_secret(): 
+    'Refreshes ACR secret'
+    cmd1 = f'kubectl delete secret acr-creds'
+    try:
+        run(cmd1) 
+    except:
+        ## if secret doesn't exist yet, just create a new one 
+        pass
+    cmd2 = 'kubectl create secret docker-registry acr-creds '+\
+        f'--docker-server=$(cat {repo_dir}/secret/acr/server) '+\
+        '--docker-username=00000000-0000-0000-0000-000000000000'+\
+        f'--docker-password=$(cat {repo_dir}/secret/acr/token)'
+    run(cmd2) 
+    pass
+
+
+
+
 
