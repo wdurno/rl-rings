@@ -1,6 +1,6 @@
-import os
 import argparse
 import warnings 
+from util import *
 
 parser = argparse.ArgumentParser(description='Builds experimental infrastructure') 
 parser.add_argument('--phase2', dest='phase2', action='store_true', help='build phase 2 (single node) architecture') 
@@ -9,37 +9,15 @@ parser.add_argument('--clean-up', dest='clean_up', action='store_true', help='te
 parser.set_defaults(phase2=False, phase3=False, clean_up=False)
 args = parser.parse_args() 
 
-## text color constants
-HEADER = '\033[95m'
-OKBLUE = '\033[94m'
-OKCYAN = '\033[96m'
-OKGREEN = '\033[92m'
-WARNING = '\033[93m'
-FAIL = '\033[91m'
-NC = '\033[0m'
-BOLD = '\033[1m'
-UNDERLINE = '\033[4m'
-
-repo_dir = os.environ.get('repo_dir')
-if repo_dir is None:
-    raise ValueError(FAIL+'Please set `repo-dir` environment variable!'+NC) 
-
 if (not args.phase2) and (not args.phase3) and (not args.clean_up):
     warnings.warn(WARNING+'No build args set. No further action will be taken.'+NC) 
     pass
 
-def run(cmd: str):
-    'Execute a string as a blocking, exception-raising system call'
-    if type(cmd) != str: 
-        raise ValueError('`cmd` must be a string!')
-    print(OKGREEN+cmd+NC)
-    exit_code = os.system(cmd) 
-    if exit_code != 0:
-        raise OSError(exit_code) 
-    pass
-
 if args.phase2:
     print(OKGREEN+'phase2 build initiated...'+NC)
+    helm_deploy_build(name='build')
+    copy_to_pod(pod_name='build') 
+    build_phase_2_container(pod_name='build') 
     pass
 
 if args.phase3:
@@ -48,9 +26,7 @@ if args.phase3:
 
 if args.clean_up:
     print(OKGREEN+'tearing-down all infrastructure...'+NC) 
-    cmd = f'cd {repo_dir}/src/terraform/state && '+\
-        'bash terraform-destroy.sh' 
-    run(cmd) 
+    tear_down() 
     pass 
 
 

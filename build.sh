@@ -24,8 +24,21 @@ if [ $? != 0 ]; then
 fi
 cd ${repo_dir} 
 
+echo -e ${GREEN}kubectl login...${NC}
+. ${repo_dir}/src/scripts/kubectl-login.sh 
+
+if [ $? != 0 ]; then
+  echo -e ${RED}kubectl login failed!${NC}
+  exit 1
+fi
+
 echo -e ${GREEN}docker login...${NC}
 . ${repo_dir}/secret/acr/get_acr_access_credentials.sh
+
+if [ $? != 0 ]; then
+  echo -e ${RED}docker login failed!${NC}
+  exit 1
+fi
 
 ## switching to python3 to handle build logic 
 python3 ${repo_dir}/src/python/build/build.py $@

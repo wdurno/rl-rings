@@ -10,10 +10,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from tensorboard import TensorBoard
+#from tensorboard import TensorBoard
 from deep_net import DQN
 from replay_memory import rpm
-from craft import envstep_done
+#from craft import envstep_done
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
