@@ -68,7 +68,9 @@ def build_phase_2_container(pod_name='build-1'):
 
 def helm_deploy_phase_2_pod(name='phase-2'): 
     'deploys phase 2 pod for single-node AI processing'
-    cmd = f'helm upgrade {name} {repo_dir}/phase-2 --install'
+    cmd = f'helm upgrade {name} {repo_dir}/src/helm/phase-2 --install '+\
+        f'--set name={name} '+\
+        f'--set docker_server=$(cat {repo_dir}/secret/acr/server)'
     run(cmd) 
     pass
 
@@ -82,7 +84,7 @@ def deploy_acr_secret():
         pass
     cmd2 = 'kubectl create secret docker-registry acr-creds '+\
         f'--docker-server=$(cat {repo_dir}/secret/acr/server) '+\
-        '--docker-username=00000000-0000-0000-0000-000000000000'+\
+        '--docker-username=00000000-0000-0000-0000-000000000000 '+\
         f'--docker-password=$(cat {repo_dir}/secret/acr/token)'
     run(cmd2) 
     pass
