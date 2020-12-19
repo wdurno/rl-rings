@@ -42,7 +42,7 @@ class Agent(object):
         self.policy = DQN(9, self.actions, self.atoms)
         self.target = DQN(9, self.actions, self.atoms)
         self.reward = []
-        self.updata_time = 0
+        self.update_time = 0
         self.memory = rpm(250000)
         self.target.load_state_dict(self.policy.state_dict())
         self.optimizer_policy = optim.Adam(self.policy.parameters(), lr = self.lr)
@@ -62,10 +62,10 @@ class Agent(object):
             tmp   = (self.policy(state) * self.support).sum(2).max(1)[1]
         return (int (tmp))
 
-    def updata_target(self):
+    def update_target(self):
         self.target.load_state_dict(self.policy.state_dict())
 
-    def updata_epsilon(self, rew):
+    def update_epsilon(self, rew):
         self.reward.append(rew)
 
         if len(self.reward) > 100:
@@ -149,9 +149,9 @@ class Agent(object):
             _loss, _Q = self.learn()
             loss.append(_loss)
             Q.append(_Q)
-            self.updata_time += 1
-            if self.updata_time % 1000 == 0:
-                self.updata_target()
+            self.update_time += 1
+            if self.update_time % 1000 == 0:
+                self.update_target()
         return np.mean(loss), np.mean(Q)
 
     def save_model(self, path):
@@ -160,7 +160,7 @@ class Agent(object):
     def load_model(self, path):
         self.policy.load_state_dict(torch.load(path + 'DQN.pkl'))
 
-    def updata_device(self, device=device):
+    def update_device(self, device=device):
         self.policy = self.policy.to(device=device)
         self.target = self.target.to(device=device)
 
@@ -285,7 +285,7 @@ def train(episode):
     env = gym.make(minerl_mission) 
 
     agent1 = Agent()  # treechop
-    agent1.updata_device()
+    agent1.update_device()
 
     sum_episodes = episode
     all_frame = 0
@@ -307,7 +307,7 @@ def train(episode):
         else :
             time = 0
         loss, Q = agent1.train_data(time)
-        agent1.updata_epsilon(_reward)
+        agent1.update_epsilon(_reward)
         rew_all.append(_reward)
 
         print('epi %d all frame %d frame %5d Q %2.5f loss %2.5f reward %3d (%3.3f)'%\
