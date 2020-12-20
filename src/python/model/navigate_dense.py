@@ -10,10 +10,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-#from tensorboard import TensorBoard
 from deep_net import DQN
 from replay_memory import rpm
-#from craft import envstep_done
+
+## cluster role 
+from cluster_config import ROLE, SIMULATION_ROLE, GRADEINT_CALCULATION_ROLE, \
+        PARAMETER_SERVER_ROLE, SINGLE_NODE_ROLE 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -29,7 +31,10 @@ def time_limit(time_out):
         return False
 
 class Agent(object):
-
+    ## TODO replace self.memory with service client if ROLE != SINGLE_NODE_ROLE 
+    ## TODO load latest model per iteration if ROLE in {SIMULATION_ROLE, GRADIENT_CALCULATION_ROLE} 
+    ## TODO learning should only occur if ROLE in {SINGLE_NODE_ROLE, PARAMETER_SERVER_ROLE} 
+    
     def __init__(self, **kwargs):
         self.lr = 3e-4
         self.batch_size = 64
@@ -278,7 +283,7 @@ def envstep(env, action_num):
             return obs, reward, done, info, i+1
     return obs, reward, done, info, 4
 
-def train(episode):
+def train(n_episodes):
     
     minerl_mission = 'MineRLNavigateDense-v0'
     print(minerl_mission)
@@ -287,10 +292,9 @@ def train(episode):
     agent1 = Agent()  # treechop
     agent1.update_device()
 
-    sum_episodes = episode
     all_frame = 0
     rew_all = []
-    for i_episode in range(sum_episodes):
+    for i_episode in range(n_episodes):
         env.seed(i_episode)
         obs = env.reset()
         done = False
@@ -312,7 +316,7 @@ def train(episode):
 
         print('epi %d all frame %d frame %5d Q %2.5f loss %2.5f reward %3d (%3.3f)'%\
                 (i_episode, all_frame, frame, Q, loss, _reward, np.mean(rew_all[-50:])))
-        if i_episode > sum_episodes :
+        if i_episode > n_episodes :
             break
 
     # reset rpm
