@@ -36,7 +36,7 @@ def tear_down():
 
 def tear_down_compute():
     'leave storage intact'
-    cmd1 = f'rm {repo_dir}/src/terraform/state/k8s.tf'
+    cmd1 = f'rm {repo_dir}/src/terraform/state/k8s.tf {repo_dir}/src/terraform/state/ephemeral_pool.tf'
     try:
         run(cmd1) 
     except:
@@ -102,7 +102,19 @@ def deploy_acr_secret():
     run(cmd2) 
     pass
 
+def terraform_deploy_phase_3(): 
+    'sets up necessary compute infrastructure for phase-3'
+    ## add required infra spec 
+    cmd1 = f'cp {repo_dir}/src/terraform/templates/phase-3/* {repo_dir}/src/terraform/state'
+    run(cmd1) 
+    ## apply 
+    cmd2 = f'cd {repo_dir}/src/terraform/state && '+\
+            '. terraform-apply.sh'
+    run(cmd2) 
+    pass 
 
-
-
+def helm_deploy_simulation_storage(): 
+    cmd = f'helm upgrade simulation-storage {repo_dir}/src/helm/simulation-storage --install'
+    run(cmd) 
+    pass 
 

@@ -1,0 +1,4 @@
+
+cassandra:
+  replicas: 5
+

@@ -14,7 +14,7 @@ if [ $? != 0 ]; then
 fi
 
 echo -e ${GREEN}procuring base infrastructure...${NC}
-cp ${repo_dir}/src/terraform/templates/* ${repo_dir}/src/terraform/state
+cp ${repo_dir}/src/terraform/templates/base/* ${repo_dir}/src/terraform/state
 cd ${repo_dir}/src/terraform/state
 terraform init
 . terraform-apply.sh

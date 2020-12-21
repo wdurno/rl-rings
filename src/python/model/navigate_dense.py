@@ -1,6 +1,7 @@
 import gym
 import math
 import time
+import uuid 
 import random
 import minerl
 import numpy as np
@@ -9,6 +10,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch import autograd 
 
 from deep_net import DQN
 from replay_memory import rpm
@@ -17,8 +19,9 @@ from replay_memory import rpm
 from cluster_config import ROLE, SIMULATION_ROLE, GRADEINT_CALCULATION_ROLE, \
         PARAMETER_SERVER_ROLE, SINGLE_NODE_ROLE 
 
+## constants 
+instance_id = uuid.uuid1().int >> 16 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 start_time = time.time()
 
 def time_limit(time_out):
@@ -48,7 +51,7 @@ class Agent(object):
         self.target = DQN(9, self.actions, self.atoms)
         self.reward = []
         self.update_time = 0
-        self.memory = rpm(250000)
+        self.memory = rpm(125000)
         self.target.load_state_dict(self.policy.state_dict())
         self.optimizer_policy = optim.Adam(self.policy.parameters(), lr = self.lr)
         self.support = torch.linspace(self.Vmin, self.Vmax, self.atoms).to(device)
@@ -138,6 +141,8 @@ class Agent(object):
 
         dist_pred.data.clamp_(0.001, 0.999)
         loss = - (dist_true * dist_pred.log()).sum(1).mean()
+        grads = autograd.grad(loss, self.policy.parameters())
+        apply_grads(grads)
         self.optimizer_policy.zero_grad()
         loss.backward()
         self.optimizer_policy.step()
@@ -146,6 +151,13 @@ class Agent(object):
             _loss = float(loss)
             _Q_pred = float((dist_pred * torch.linspace(self.Vmin, self.Vmax, self.atoms).to(device)).sum(1).mean())
         return _loss, _Q_pred
+
+    def apply_grads(grads): 
+        self.optimizer_policy.zero_grad() 
+        for p, g in zip(self.policy.parameters(), grads): 
+            p.grad.fill_(g) 
+        self.optimizer_policy.step() 
+        pass 
 
     def train_data(self, time):
         loss = []
@@ -294,8 +306,16 @@ def train(n_episodes):
 
     all_frame = 0
     rew_all = []
-    for i_episode in range(n_episodes):
-        env.seed(i_episode)
+    i_episode = 0 
+    continue_training = True 
+    while continue_training:
+        ## continue loop? 
+        i_episode += 1 
+        if n_episodes is not None: 
+            if i_episode > n_episodes: 
+                continue_training = False 
+        ## init env 
+        env.seed(instance_id + i_episode) 
         obs = env.reset()
         done = False
 
@@ -310,7 +330,9 @@ def train(n_episodes):
             time = frame // 20
         else :
             time = 0
-        loss, Q = agent1.train_data(time)
+        ## model fitting, if applicable 
+        if ROLE == SINGLE_NODE_ROLE:
+            loss, Q = agent1.train_data(time)
         agent1.update_epsilon(_reward)
         rew_all.append(_reward)
 
@@ -325,5 +347,7 @@ def train(n_episodes):
     env.close()
 
 if __name__ == '__main__':
-    train(10000)
-
+    if ROLE in SINGLE_NODE_ROLE: 
+        train(10000)
+    if ROLE in SIMULATION_ROLE:
+        train(None) 
