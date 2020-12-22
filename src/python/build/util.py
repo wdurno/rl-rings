@@ -130,3 +130,8 @@ def helm_deploy_minio():
     run(cmd2) 
     pass 
 
+def helm_deploy_postgres():
+    cmd = f'helm upgrade postgres {repo_dir}/src/helm/postgres --install'
+    run(cmd) 
+    pass 
+

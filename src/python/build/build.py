@@ -35,6 +35,7 @@ if args.phase_3:
     terraform_deploy_phase_3() 
     helm_deploy_simulation_storage()
     helm_deploy_minio() 
+    helm_deploy_postgres() 
     pass
 
 if args.clean_up_compute:

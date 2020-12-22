@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  labels:
+    app: postgres
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+  selector:
+    app: postgres
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-db 
+  labels:
+    app: postgres
+spec:
+  selector:
+    matchLabels:
+      app: postgres 
+      tier: postgresql
+  replicas: 1 
+  template:
+    metadata:
+      labels:
+        app: postgres 
+        tier: postgresql
+    spec:
+      containers:
+        - name: my-postgres
+          image: postgres:13
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_PASSWORD
+              value: "postgres-password"
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+      nodeSelector:         
+        agentpool: storage 
+      volumes:
+        - name: pgdata 
+          emptyDir: {} 
