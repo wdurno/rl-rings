@@ -16,7 +16,7 @@ from deep_net import DQN
 from replay_memory import rpm
 
 ## cluster role 
-from cluster_config import ROLE, SIMULATION_ROLE, GRADEINT_CALCULATION_ROLE, \
+from cluster_config import ROLE, SIMULATION_ROLE, GRADIENT_CALCULATION_ROLE, \
         PARAMETER_SERVER_ROLE, SINGLE_NODE_ROLE 
 
 ## constants 
@@ -315,7 +315,7 @@ def train(n_episodes):
             if i_episode > n_episodes: 
                 continue_training = False 
         ## init env 
-        env.seed(instance_id + i_episode) 
+        env.seed((instance_id + i_episode) % 10000) 
         obs = env.reset()
         done = False
 
@@ -347,7 +347,7 @@ def train(n_episodes):
     env.close()
 
 if __name__ == '__main__':
-    if ROLE in SINGLE_NODE_ROLE: 
+    if ROLE == SINGLE_NODE_ROLE: 
         train(10000)
-    if ROLE in SIMULATION_ROLE:
+    if ROLE == SIMULATION_ROLE:
         train(None) 

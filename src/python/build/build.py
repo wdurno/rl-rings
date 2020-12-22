@@ -15,19 +15,26 @@ if (not args.phase_2) and (not args.phase_3) and (not args.clean_up_compute) and
     warnings.warn(WARNING+'No build args set. No further action will be taken.'+NC) 
     pass
 
+if not args.no_build:
+    print(OKGREEN+'running docker build...'+NC)  
+    helm_deploy_build(name='build')
+    copy_to_pod(pod_name='build') 
+    build_phase_2_container(pod_name='build') 
+    helm_uninstall_build(name='build')
+
+print(OKGREEN+'refreshing ACR secret...'+NC)  
+deploy_acr_secret()  
+
 if args.phase_2:
     print(OKGREEN+'phase-2 build initiated...'+NC) 
-    if not args.no_build: 
-        helm_deploy_build(name='build')
-        copy_to_pod(pod_name='build') 
-        build_phase_2_container(pod_name='build') 
-        helm_uninstall_build(name='build')
-    deploy_acr_secret() 
     helm_deploy_phase_2_pod(name='phase-2') 
     pass
 
 if args.phase_3:
     print(OKGREEN+'phase-3 build initiated...'+NC)
+    terraform_deploy_phase_3() 
+    helm_deploy_simulation_storage()
+    helm_deploy_minio() 
     pass
 
 if args.clean_up_compute:

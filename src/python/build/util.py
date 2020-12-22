@@ -36,7 +36,9 @@ def tear_down():
 
 def tear_down_compute():
     'leave storage intact'
-    cmd1 = f'rm {repo_dir}/src/terraform/state/k8s.tf {repo_dir}/src/terraform/state/ephemeral_pool.tf'
+    cmd1 = f'rm {repo_dir}/src/terraform/state/k8s.tf '+\
+            '{repo_dir}/src/terraform/state/ephemeral_pool.tf '+\
+            '{repo_dir}/src/terraform/state/storage_pool.tf' 
     try:
         run(cmd1) 
     except:
@@ -116,5 +118,15 @@ def terraform_deploy_phase_3():
 def helm_deploy_simulation_storage(): 
     cmd = f'helm upgrade simulation-storage {repo_dir}/src/helm/simulation-storage --install'
     run(cmd) 
+    pass 
+
+def helm_deploy_minio(): 
+    ## install helm chart 
+    cmd1 = f'helm repo add minio https://helm.min.io/'
+    run(cmd1) 
+    ## apply helm chart with values 
+    cmd2 = f'helm upgrade minio minio/minio --install '+\
+            f'-f {repo_dir}/src/helm/minio/values.yaml'
+    run(cmd2) 
     pass 
 

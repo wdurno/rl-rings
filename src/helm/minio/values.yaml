@@ -1,0 +1,9 @@
+
+# Number of MinIO containers running
+replicas: 4
+
+mode: distributed 
+
+nodeSelector:
+  agentpool: storage 
+
