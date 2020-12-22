@@ -1,0 +1,3 @@
+minio
+psycopg2 ## postgres
+cassandra-driver 
