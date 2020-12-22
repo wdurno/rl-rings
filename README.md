@@ -1,6 +1,6 @@
 # rl-hypothesis-2
 
-Hypothesis: With sufficient data, reinforcement learning attains transferable generality, observable as one-shot learning. 
+Goal: Apply meta-learning to MineRL, producing a few-shot learning base-line. Implement with distributed computing, shortening time spent on experiments. Use base-line and fast experiments to study one-shot learning approaches. 
 
 ## configure
 
