@@ -56,21 +56,43 @@ class CassandraConnector(__StorageABC):
         '''
         cmd2 = '''
         CREATE TABLE IF NOT EXISTS cassandra.simulations (
-            id uuid PRIMARY_KEY,
+            id uuid PRIMARY KEY,
             b64data text  
         );
-        ''' ## TODO finish data model 
+        '''  
         self.__exec(cmd1) 
         self.__exec(cmd2) 
         pass 
     
     def insert_game_transition(self, obj): 
+        'upload a single game transition'
         ## get base64 representation 
         obj_b64_string = base64.b64encode(pickle.dumps(obj)).decode() 
         ## generate key 
-        uid = str(uuid.uuid1()) 
+        _uuid = str(uuid.uuid1()) 
         ## upload 
-        cmd = f'INSERT INTO cassandra.simulations (id, b64data) VALUES ({uid}, {obj_b64_string});'
+        cmd = f"INSERT INTO cassandra.simulations (id, b64data) VALUES ({_uuid}, '{obj_b64_string}');"
         self.__exec(cmd) 
         pass
+
+    def get_game_transition(self, _uuid):
+        'get a single game transition'
+        ## download data 
+        cmd = f"SELECT b64data FROM cassandra.simulations WHERE id={_uuid};"
+        row_list = self.__exec(cmd) 
+        ## unpack single item 
+        obj_b64_string = row_list[0].b64data 
+        return pickle.loads(base64.b64decode(obj_b64_string.encode())) 
+
+    def get_all_game_transition_uuids(self):
+        ## download data 
+        cmd = "SELECT id FROM cassandra.simulations;"
+        row_list = self.__exec(cmd) 
+        ## unpack 
+        return [row.id for row in row_list] 
     pass 
+
+
+
+
+

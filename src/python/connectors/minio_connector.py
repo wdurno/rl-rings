@@ -13,7 +13,7 @@ class MinIOConnector(__StorageABC):
         if type(secret) != dict: 
             raise value_error
         if 'accesskey' not in secret or 'secretkey' not in secret: 
-            rause value_error 
+            raise value_error 
         ## store values 
         super().__init__(url, secret) 
         self.connection = None  
@@ -22,14 +22,17 @@ class MinIOConnector(__StorageABC):
     def __get_connection(self):
         'Get live connection to storage.'
         if self.connection is None: 
-            self.connection = Minio(url, \
-                    access_key=secret['accesskey'], \
-                    secert_key=secret['secretkey'])
+            self.connection = Minio(self.url, \
+                    access_key=self.secret['accesskey'], \
+                    secret_key=self.secret['secretkey'])
         return self.connection  
     
     def close_connection(self): 
         'Close any existing storage connection'
-        raise NotImplementedError('Abstract base class not concretized!')
+        ## I don't think connections actually persist
+        ## So, enable a reconnect anyways 
+        self.connection = None 
+        pass
 
     def init_storage(self): 
         '''

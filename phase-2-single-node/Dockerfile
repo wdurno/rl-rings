@@ -11,9 +11,11 @@ RUN apt-get update && \
         python3-pip \
 	openjdk-8-jdk \
 	vim \
+	curl \
 	xvfb \
 	x11-xserver-utils \
 	python3-psycopg2 && \
-    pip3 install -r /app/src/python/model/requirements.txt 
+    pip3 install -r /app/src/python/model/requirements.txt && \
+    pip3 install -r /app/src/python/connectors/requirements.txt 
 
 WORKDIR /app

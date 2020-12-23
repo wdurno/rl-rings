@@ -35,6 +35,9 @@ fi
 echo -e ${GREEN}docker login...${NC}
 . ${repo_dir}/secret/acr/get_acr_access_credentials.sh
 
+echo -e ${GREEN}postgres secret...${NC}
+. ${repo_dir}/secret/postgres/make_postgres_secret.sh 
+
 if [ $? != 0 ]; then
   echo -e ${RED}docker login failed!${NC}
   exit 1

@@ -1,6 +1,7 @@
 
 from storageABC import __StorageABC
 import psycopg2
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
 
 class PostgresConnector(__StorageABC): 
     'Manipulate a postgres instance'
@@ -14,7 +15,8 @@ class PostgresConnector(__StorageABC):
     def __get_connection(self):
         'Get live connection to storage.'
         if self.connection is None: 
-            self.connection = psycopg2.connect(dbname="api", user="postgres", host="db", port="5432", password=self.secret) 
+            self.connection = psycopg2.connect(dbname="structured", user="postgres", host=self.url, port="5432", password=self.secret)
+            self.connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
         return self.connection 
 
     def __exec(self, sql): 
@@ -26,7 +28,6 @@ class PostgresConnector(__StorageABC):
             cur = connection.cursor() 
             cur.execute(sql) 
             rows = cur.fetchall() 
-            cur.commit() 
             return rows 
         try:
             ## first attempt, assuming connectivity 
@@ -35,7 +36,7 @@ class PostgresConnector(__StorageABC):
             ## assuming connectivity error...
             ## attempting reconnection and trying again... 
             self.connection = None 
-            retrun run_sql(sql) 
+            return run_sql(sql) 
         pass 
 
     def close_connection(self): 
@@ -56,7 +57,10 @@ class PostgresConnector(__StorageABC):
                    reward FLOAT4,
                    etc FLOAT4);
                ''' ## TODO finish data model 
+        self.connection = psycopg2.connect(user='postgres', host=self.url, port='5432', password=self.secret)
+        self.connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
         self.__exec(sql1)
+        self.close_connection() 
         self.__exec(sql2)
         pass 
     pass 
