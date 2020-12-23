@@ -143,9 +143,6 @@ class Agent(object):
         loss = - (dist_true * dist_pred.log()).sum(1).mean()
         grads = autograd.grad(loss, self.policy.parameters())
         apply_grads(grads)
-        self.optimizer_policy.zero_grad()
-        loss.backward()
-        self.optimizer_policy.step()
 
         with torch.no_grad():
             _loss = float(loss)

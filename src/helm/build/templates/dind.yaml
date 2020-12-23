@@ -27,3 +27,5 @@ spec:
         emptyDir: {} 
       - name: build-dir
         emptyDir: {} 
+    nodeSelector: 
+      agentpool: default

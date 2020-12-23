@@ -12,3 +12,5 @@ spec:
         imagePullPolicy: Always
     imagePullSecrets:
       - name: acr-creds
+    nodeSelector: 
+      agentpool: default 

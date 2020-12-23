@@ -7,7 +7,7 @@ class __StorageABC(ABC):
     def __init__(self, url, secret): 
         'init storage interface instance' 
         self.url = url 
-        self.secret = seret 
+        self.secret = secret 
         pass 
 
     def __get_connection(self):

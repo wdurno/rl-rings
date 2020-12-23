@@ -1,8 +1,10 @@
 from cassandra.cluster import Cluster
 from cassandra import ConsistencyLevel 
 from cassandra.query import SimpleStatement 
+from storageABC import __StorageABC 
 import uuid
-from strageABC import __StorageABC 
+import pickle 
+import base64
 
 class CassandraConnector(__StorageABC):
     'Cassanda storage connector'
@@ -22,6 +24,10 @@ class CassandraConnector(__StorageABC):
 
     def __exec(self, cql): 
         'submit a cql request to cassandra'
+        if len(cql) < 500:
+            print('CASSANDRA EXEC: '+str(cql)) 
+        else:
+            print('CASSANDRA EXEC: '+str(cql[:100])+'... (truncated), total size: '+str(len(cql))) 
         connection = self.__get_connection() 
         try:
             return connection.execute(cql).all() 
@@ -45,17 +51,26 @@ class CassandraConnector(__StorageABC):
         CREATE  KEYSPACE IF NOT EXISTS cassandra  
            WITH REPLICATION = { 
               'class' : 'SimpleStrategy',
-              'replication_factor' : 3  
+              'replication_factor' : 2  
            }
         '''
         cmd2 = '''
         CREATE TABLE IF NOT EXISTS cassandra.simulations (
-            id uuid,
-            PRIMARY KEY (id) 
+            id uuid PRIMARY_KEY,
+            b64data text  
         );
         ''' ## TODO finish data model 
         self.__exec(cmd1) 
         self.__exec(cmd2) 
         pass 
     
-    ## other methods will be application and storage-specific  
+    def insert_game_transition(self, obj): 
+        ## get base64 representation 
+        obj_b64_string = base64.b64encode(pickle.dumps(obj)).decode() 
+        ## generate key 
+        uid = str(uuid.uuid1()) 
+        ## upload 
+        cmd = f'INSERT INTO cassandra.simulations (id, b64data) VALUES ({uid}, {obj_b64_string});'
+        self.__exec(cmd) 
+        pass
+    pass 

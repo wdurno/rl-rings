@@ -1,7 +1,8 @@
 FROM ubuntu 
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    repo_dir=/app
+    repo_dir=/app \
+    PYTHONPATH=/app/src/python
 
 ADD app /app
 
@@ -11,7 +12,8 @@ RUN apt-get update && \
 	openjdk-8-jdk \
 	vim \
 	xvfb \
-	x11-xserver-utils && \
+	x11-xserver-utils \
+	python3-psycopg2 && \
     pip3 install -r /app/src/python/model/requirements.txt 
 
 WORKDIR /app
