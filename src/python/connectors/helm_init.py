@@ -27,7 +27,7 @@ def continue_attempting(func, wait_time=10):
     pass
 
 def init_minio():
-    mc = minio_connector.MinIOConnector('minio:9000', MINIO_ACCESSKEY, MINIO_SECRETKEY) 
+    mc = minio_connector.MinIOConnector('minio:9000', {'accesskey': MINIO_ACCESSKEY, 'secretkey': MINIO_SECRETKEY}) 
     mc.init_storage() 
     pass 
 

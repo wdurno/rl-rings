@@ -37,6 +37,7 @@ echo -e ${GREEN}docker login...${NC}
 
 echo -e ${GREEN}postgres secret...${NC}
 . ${repo_dir}/secret/postgres/make_postgres_secret.sh 
+kubectl create secret generic postgres --from-file=${repo_dir}/secret/postgres/postgres-password
 
 if [ $? != 0 ]; then
   echo -e ${RED}docker login failed!${NC}
