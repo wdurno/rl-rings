@@ -35,12 +35,18 @@ fi
 echo -e ${GREEN}docker login...${NC}
 . ${repo_dir}/secret/acr/get_acr_access_credentials.sh
 
-echo -e ${GREEN}postgres secret...${NC}
-. ${repo_dir}/secret/postgres/make_postgres_secret.sh 
-kubectl create secret generic postgres --from-file=${repo_dir}/secret/postgres/postgres-password
-
 if [ $? != 0 ]; then
   echo -e ${RED}docker login failed!${NC}
+  exit 1
+fi
+
+echo -e ${GREEN}postgres secret...${NC}
+. ${repo_dir}/secret/postgres/make_postgres_secret.sh
+kubectl delete secret postgres 
+kubectl create secret generic postgres --from-file=${repo_dir}/secret/postgres/postgres-secret
+
+if [ $? != 0 ]; then
+  echo -e ${RED}secret upload failed!${NC}
   exit 1
 fi
 
