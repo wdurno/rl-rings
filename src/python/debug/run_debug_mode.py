@@ -3,7 +3,20 @@ import jinja2
 from subprocess import Popen, PIPE
 
 ## TODO this is duplicated code in this file. See python/build/util.py. Refactor required. 
-repo_dir = os.environ['repo-dir'] 
+
+## constants 
+## text color constants
+HEADER = '\033[95m'
+OKBLUE = '\033[94m'
+OKCYAN = '\033[96m'
+OKGREEN = '\033[92m'
+WARNING = '\033[93m'
+FAIL = '\033[91m'
+NC = '\033[0m'
+BOLD = '\033[1m'
+UNDERLINE = '\033[4m'
+
+repo_dir = os.environ['repo_dir'] 
 
 def run(cmd: str, stdin: str=None):
     'Execute a string as a blocking, exception-raising system call'
@@ -12,7 +25,6 @@ def run(cmd: str, stdin: str=None):
         raise ValueError('`cmd` must be a string!')
     ## execute
     print(OKCYAN+cmd+NC)
-    exit_code = os.system(cmd)
     if stdin is None:
         ## no stdin
         proc = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
@@ -51,4 +63,7 @@ def init_storage():
     stdin = pod_yaml.encode()
     run(cmd, stdin=stdin)
     pass
+
+if __name__ == '__main__':
+    init_storage() 
 

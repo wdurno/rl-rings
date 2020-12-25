@@ -27,6 +27,9 @@ class PostgresConnector(__StorageABC):
             connection = self.__get_connection() 
             cur = connection.cursor() 
             cur.execute(sql) 
+            if cur.description is None: 
+                ## no rows to return 
+                return [] 
             rows = cur.fetchall() 
             return rows 
         try:
@@ -42,7 +45,8 @@ class PostgresConnector(__StorageABC):
     def close_connection(self): 
         'Close any existing storage connection'
         if self.connection is not None: 
-            self.connection.close() 
+            self.connection.close()
+            self.connection = None 
         pass 
 
     def init_storage(self): 

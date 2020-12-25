@@ -19,20 +19,24 @@ repo_dir = os.environ.get('repo_dir')
 if repo_dir is None:
     raise ValueError(FAIL+'Please set `repo-dir` environment variable!'+NC) 
 
-def run(cmd: str, stdin: str=None):
+def run(cmd: str, stdin: str=None, os_system: bool=False):
     'Execute a string as a blocking, exception-raising system call'
     ## verify assumptions 
     if type(cmd) != str:
         raise ValueError('`cmd` must be a string!')
     ## execute 
     print(OKCYAN+cmd+NC)
-    exit_code = os.system(cmd)
     if stdin is None: 
         ## no stdin 
-        proc = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
-        exit_code = proc.wait() 
-        stdout = proc.stdout.read().decode() 
-        stderr = proc.stderr.read().decode() 
+        if not os_system:
+            proc = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+            exit_code = proc.wait() 
+            stdout = proc.stdout.read().decode() 
+            stderr = proc.stderr.read().decode() 
+        else:
+            exit_code = os.system(cmd)
+            stdout = 'not captured'
+            stderr = 'not captured'
     else:
         ## apply stdin 
         if type(stdin) not in [str, bytes]:
@@ -102,7 +106,7 @@ def build_phase_2_container(pod_name='build-1'):
     ## `repo_dir` not referenced, because local `repo_dir` is different from build env `repo_dir`
     ## so, it is hard-coded as `/build/rl-hypothesis-2`
     cmd = f'kubectl exec -it {pod_name} -- sh /build/rl-hypothesis-2/phase-2-single-node/build.sh'
-    run(cmd) 
+    run(cmd, os_system=True) 
     pass
 
 def helm_deploy_phase_2_pod(name='phase-2'): 

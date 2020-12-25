@@ -24,7 +24,8 @@ class MinIOConnector(__StorageABC):
         if self.connection is None: 
             self.connection = Minio(self.url, \
                     access_key=self.secret['accesskey'], \
-                    secret_key=self.secret['secretkey'])
+                    secret_key=self.secret['secretkey'], \
+                    secure=False)
         return self.connection  
     
     def close_connection(self): 

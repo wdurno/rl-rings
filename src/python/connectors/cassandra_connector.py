@@ -40,7 +40,9 @@ class CassandraConnector(__StorageABC):
 
     def close_connection(self): 
         'Close any existing storage connection'
-        raise NotImplementedError('Abstract base class not concretized!')
+        ## TODO verify this mechanism 
+        self.connection = None 
+        pass
 
     def init_storage(self): 
         '''

@@ -11,8 +11,8 @@ args = parser.parse_args()
 
 ## contstants 
 MINIO_ACCESSKEY = os.environ['MINIO_ACCESSKEY'] 
-MINIO_SECRETKEY = os.envrion['MINIO_SECRETKEY'] 
-POSTGRES_SECRET = os.environ['POSTGRES_SECRET'] 
+MINIO_SECRETKEY = os.environ['MINIO_SECRETKEY'] 
+POSTGRES_SECRET = os.environ['POSTGRES_SECRET'].replace('\n', '') 
 
 def continue_attempting(func, wait_time=10): 
     continue_trying = True 
@@ -23,16 +23,17 @@ def continue_attempting(func, wait_time=10):
         except Exception as e:
             print('exception encountered, waiting '+str(wait_time)+' seconds and reattempting...') 
             print(e)
-            wait(wait_time) 
+            sleep(wait_time) 
     pass
 
 def init_minio():
-    mc = minio_connector.MinIOConnector('minio:9000', {'accesskey': MINIO_ACCESSKEY, 'secretkey': MINIO_SECRETKEY}) 
+    mc = minio_connector.MinIOConnector('minio:9000', {'accesskey': MINIO_ACCESSKEY, 'secretkey': MINIO_SECRETKEY}, secure=False) 
     mc.init_storage() 
     pass 
 
 def init_postgres(): 
-    pc = postgres_connector.PostgresConnector('postgres', POSTGRES_SECRET)  
+    pc = postgres_connector.PostgresConnector('postgres', POSTGRES_SECRET) 
+    pc.init_storage() 
     pass 
 
 def init_cassandra():

@@ -1,8 +1,8 @@
 ## Curious why I'm not using Helm hooks?
 ## It's because I don't feel like editing 
 ## MinIO's chart. 
-apiVersion: batch/v1
-kind: Debug
+apiVersion: v1
+kind: Pod
 metadata:
     name: debug
     labels:

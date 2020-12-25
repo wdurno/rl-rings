@@ -8,7 +8,7 @@ cc = cassandra_connector.CassandraConnector('http://cassandra')
 
 ## CONFIG 
 if 'POSTGRES_SECRET' in os.environ:
-    pc = postgres_connector.PostgresConnector('postgres'm os.environ['POSTGRES_SECRET']) 
+    pc = postgres_connector.PostgresConnector('postgres', os.environ['POSTGRES_SECRET'].replace('\n', '')) 
     pass
 
 if 'MINIO_ACCESSKEY' in os.environ and 'MINIO_SECRETKEY' in os.environ: 
