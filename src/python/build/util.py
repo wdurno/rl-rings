@@ -65,8 +65,8 @@ def tear_down():
 def tear_down_compute():
     'leave storage intact'
     cmd1 = f'rm {repo_dir}/src/terraform/state/k8s.tf '+\
-            '{repo_dir}/src/terraform/state/ephemeral_pool.tf '+\
-            '{repo_dir}/src/terraform/state/storage_pool.tf' 
+            f'{repo_dir}/src/terraform/state/ephemeral_pool.tf '+\
+            f'{repo_dir}/src/terraform/state/storage_pool.tf' 
     try:
         run(cmd1) 
     except:
@@ -74,7 +74,7 @@ def tear_down_compute():
         pass
     cmd2 = f'cd {repo_dir}/src/terraform/state && '+\
         '. terraform-apply.sh'
-    run(cmd2, os_system) 
+    run(cmd2, os_system=True) 
     pass 
 
 def helm_deploy_build(name='build-1', blocking=True): 
