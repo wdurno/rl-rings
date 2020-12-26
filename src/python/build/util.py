@@ -101,12 +101,20 @@ def copy_to_pod(pod_name='build-1', src=repo_dir, dst='/build'):
     run(cmd) 
     pass 
 
-def build_phase_2_container(pod_name='build-1'): 
-    'executes build on remote pod'
+def build_base_image(pod_name='build-1'):
+    'execute base-image build on remote pod'
     ## `repo_dir` not referenced, because local `repo_dir` is different from build env `repo_dir`
     ## so, it is hard-coded as `/build/rl-hypothesis-2`
-    cmd = f'kubectl exec -it {pod_name} -- sh /build/rl-hypothesis-2/phase-2-single-node/build.sh'
+    cmd = f'kubectl exec -it {pod_name} -- sh /build/rl-hypothesis-2/build/base-image/build.sh'
     run(cmd, os_system=True) 
+    pass
+
+def build_ai_image(pod_name='build-1'):
+    'execute ai image build on remote pod'
+    ## `repo_dir` not referenced, because local `repo_dir` is different from build env `repo_dir`
+    ## so, it is hard-coded as `/build/rl-hypothesis-2`
+    cmd = f'kubectl exec -it {pod_name} -- sh /build/rl-hypothesis-2/build/ai/build.sh'
+    run(cmd, os_system=True)
     pass
 
 def helm_deploy_phase_2_pod(name='phase-2'): 

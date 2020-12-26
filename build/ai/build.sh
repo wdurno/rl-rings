@@ -10,7 +10,7 @@ then
     exit 1
 fi
 
-BUILD_DIR=${repo_dir}/phase-2-single-node
+BUILD_DIR=${repo_dir}/build/ai
 
 echo -e ${GREEN}copying code into build dir...${NC} 
 cp -r ${repo_dir}/src ${BUILD_DIR}/app/src
@@ -18,8 +18,9 @@ cp -r ${repo_dir}/src ${BUILD_DIR}/app/src
 echo -e ${GREEN}running docker build...${NC} 
 DOCKER_SERVER=$(cat ${repo_dir}/secret/acr/server)
 DOCKER_TOKEN=$(cat ${repo_dir}/secret/acr/token)
-IMAGE_NAME=${DOCKER_SERVER}/phase-2:v0.0.1
-docker build -t ${IMAGE_NAME} ${BUILD_DIR}
+IMAGE_NAME=${DOCKER_SERVER}/ai:v0.0.1
+echo ${DOCKER_TOKEN} | docker login ${DOCKER_SERVER} --username 00000000-0000-0000-0000-000000000000 --password-stdin
+docker build -t ${IMAGE_NAME} ${BUILD_DIR} --build-arg BASE_IMAGE=${DOCKER_SERVER}/base-image:v0.0.1
 
 if [ $? != 0 ]; then
     echo -e ${RED}failed to build!${NC}
@@ -27,5 +28,4 @@ if [ $? != 0 ]; then
 fi
 
 echo -e ${GREEN}pushing docker image to resgistry...${NC}
-echo ${DOCKER_TOKEN} | docker login ${DOCKER_SERVER} --username 00000000-0000-0000-0000-000000000000 --password-stdin
 docker push ${IMAGE_NAME}

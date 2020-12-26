@@ -14,6 +14,7 @@ from torch import autograd
 
 from deep_net import DQN
 from replay_memory import rpm
+from util import get_latest_model, upload_transition, upload_metrics    
 
 ## cluster role 
 from cluster_config import ROLE, SIMULATION_ROLE, GRADIENT_CALCULATION_ROLE, \
@@ -225,7 +226,12 @@ class Agent(object):
                 gam = torch.tensor([gam])
                 important = reward > 0.001
                 if frame >= TD_step and reward < 2.1:
-                    self.memory.push([state[-TD_step-1], m_action[-TD_step], state[-1], reward, _done, gam], important)
+                    game_transition = ([state[-TD_step-1], m_action[-TD_step], state[-1], reward, _done, gam], important) 
+                    if ROLE == SINGLE_NODE_ROLE:
+                        self.memory.push(*game_transition)
+                    if ROLE == SIMULATION_ROLE:
+                        ## upload to cassandra 
+                        upload_transition(game_transition) 
 
             if done and not test:
                 for i in range(TD_step-1):
@@ -237,7 +243,12 @@ class Agent(object):
                     _done = torch.tensor([1.0])
                     gam = torch.tensor([gam])
                     important = frame < 17900
-                    self.memory.push([state[-TD_step+i], m_action[-TD_step+i+1], state[-1], reward, _done, gam], important)
+                    game_transition = ([state[-TD_step+i], m_action[-TD_step+i+1], state[-1], reward, _done, gam], important) 
+                    if ROLE == SINGLE_NODE_ROLE: 
+                        self.memory.push(*game_transition) 
+                    if ROLE == SIMULATION_ROLE:
+                        ## upload to cassandra 
+                        upload_transition(game_transition) 
 
 
         if not test:
@@ -306,6 +317,12 @@ def train(n_episodes):
     i_episode = 0 
     continue_training = True 
     while continue_training:
+        ## get latest model 
+        if ROLE == SIMULATION_ROLE:
+            path = get_latest_model() 
+            if path is not None: 
+                ## latest model obtained
+                load_model(path)  
         ## continue loop? 
         i_episode += 1 
         if n_episodes is not None: 
@@ -315,7 +332,7 @@ def train(n_episodes):
         env.seed((instance_id + i_episode) % 10000) 
         obs = env.reset()
         done = False
-
+        ## simulate 
         m_obs = [np2torch(obs['pov']) for _ in range(10)]
         m_inv = [obs['inventory'] for _ in range(10)]
         _reward = 0
@@ -333,10 +350,15 @@ def train(n_episodes):
         agent1.update_epsilon(_reward)
         rew_all.append(_reward)
 
-        print('epi %d all frame %d frame %5d Q %2.5f loss %2.5f reward %3d (%3.3f)'%\
-                (i_episode, all_frame, frame, Q, loss, _reward, np.mean(rew_all[-50:])))
-        if i_episode > n_episodes :
-            break
+        ## metrics 
+        if ROLE == SINGLE_NODE_ROLE: 
+            print('epi %d all frame %d frame %5d Q %2.5f loss %2.5f reward %3d (%3.3f)'%\
+                    (i_episode, all_frame, frame, Q, loss, _reward, np.mean(rew_all[-50:])))
+        if ROLE == SIMULATION_ROLE:
+            ## TODO store metrics 
+            print('epi %d all frame %d frame %5d reward %3d (%3.3f)'%\
+                    (i_episode, all_frame, frame, _reward, np.mean(rew_all[-50:])))
+        pass
 
     # reset rpm
     agent1.memory.clear()

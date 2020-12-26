@@ -1,0 +1,5 @@
+
+name: "simulation"
+docker_server: ""
+replicas: 3 
+
