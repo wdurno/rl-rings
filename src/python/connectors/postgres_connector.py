@@ -1,5 +1,5 @@
 
-from storageABC import __StorageABC
+from connectors.storageABC import __StorageABC
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
 

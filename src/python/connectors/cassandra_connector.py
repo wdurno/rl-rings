@@ -1,7 +1,7 @@
 from cassandra.cluster import Cluster
 from cassandra import ConsistencyLevel 
 from cassandra.query import SimpleStatement 
-from storageABC import __StorageABC 
+from connectors.storageABC import __StorageABC 
 import uuid
 import pickle 
 import base64

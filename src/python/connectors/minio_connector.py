@@ -1,7 +1,7 @@
 
 import io
 from minio import Minio
-from storageABC import __StorageABC 
+from connectors.storageABC import __StorageABC 
 
 class MinIOConnector(__StorageABC):
     'Connect to MinIO'
