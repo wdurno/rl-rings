@@ -10,7 +10,7 @@ metadata:
 spec:
     containers:
       - name: init-storage
-        image: {{ docker_server }}/phase-2:v0.0.1
+        image: {{ docker_server }}/ai:v0.0.1
         env:
           - name: MINIO_ACCESSKEY
             valueFrom:

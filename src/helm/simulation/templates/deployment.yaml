@@ -41,7 +41,7 @@ spec:
           imagePullPolicy: Always
           resources:
             requests:
-              memory: "2000Mi"
+              memory: "4000Mi"
               cpu: "1500m"
       imagePullSecrets:
         - name: acr-creds
