@@ -44,11 +44,11 @@ spec:
           name: cql
         resources:
           limits:
-            cpu: "500m"
-            memory: 1Gi
+            cpu: "1500m"
+            memory: 3Gi
           requests:
             cpu: "500m"
-            memory: 1Gi
+            memory: 3Gi
         securityContext:
           capabilities:
             add:

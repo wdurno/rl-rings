@@ -4,16 +4,16 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-    name: init-storage
+    name: init-storage-{{ rand_id }} 
     labels:
-      name: init-storage
+      name: init-storage-{{ rand_id }} 
 spec: 
   backoffLimit: 1 
   template: 
     spec:
       containers:
         - name: init-storage
-          image: {{ docker_server }}/phase-2:v0.0.1
+          image: {{ docker_server }}/ai:v0.0.1
           env:
             - name: MINIO_ACCESSKEY
               valueFrom:

@@ -8,7 +8,8 @@ parser.add_argument('--phase-3', dest='phase_3', action='store_true', help='buil
 parser.add_argument('--clean-up-compute', dest='clean_up_compute', action='store_true', help='tear-down compute, keep storage') 
 parser.add_argument('--clean-up', dest='clean_up', action='store_true', help='tear-down all infrastructure') 
 parser.add_argument('--no-build', dest='no_build', action='store_true', help='no Docker builds, just re-use')
-parser.add_argument('--no-base-build', dest='no_base_build', action='store_true', help='do not build the base Docker image') 
+parser.add_argument('--no-base-build', dest='no_base_build', action='store_true', help='do not build the base Docker image')
+parser.add_argument('--keep-build-pod', dest='keep_build_pod', action='store_true', help='do not delete the build pod') 
 parser.set_defaults(phase2=False, phase3=False, clean_up=False)
 args = parser.parse_args() 
 
@@ -23,7 +24,8 @@ if not args.no_build:
     if not args.no_base_build:
         build_base_image(pod_name='build') 
     build_ai_image(pod_name='build')
-    helm_uninstall_build(name='build')
+    if not args.keep_build_pod: 
+        helm_uninstall_build(name='build')
     pass 
 
 print(OKGREEN+'refreshing ACR secret...'+NC)  
@@ -41,6 +43,7 @@ if args.phase_3:
     helm_deploy_minio() 
     helm_deploy_postgres() 
     init_storage() 
+    helm_deploy_simulation() 
     pass
 
 if args.clean_up_compute:

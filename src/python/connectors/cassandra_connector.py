@@ -22,12 +22,13 @@ class CassandraConnector(__StorageABC):
             self.connection = cluster.connect()  
         return self.connection 
 
-    def __exec(self, cql): 
+    def __exec(self, cql, debug=False): 
         'submit a cql request to cassandra'
-        if len(cql) < 500:
-            print('CASSANDRA EXEC: '+str(cql)) 
-        else:
-            print('CASSANDRA EXEC: '+str(cql[:100])+'... (truncated), total size: '+str(len(cql))) 
+        if debug: 
+            if len(cql) < 500:
+                print('CASSANDRA EXEC: '+str(cql)) 
+            else:
+                print('CASSANDRA EXEC: '+str(cql[:100])+'... (truncated), total size: '+str(len(cql))) 
         connection = self.__get_connection() 
         try:
             return connection.execute(cql).all() 
@@ -62,8 +63,8 @@ class CassandraConnector(__StorageABC):
             b64data text  
         );
         '''  
-        self.__exec(cmd1) 
-        self.__exec(cmd2) 
+        self.__exec(cmd1, debug=True) 
+        self.__exec(cmd2, debug=True) 
         pass 
     
     def insert_game_transition(self, obj): 
@@ -75,7 +76,7 @@ class CassandraConnector(__StorageABC):
         ## upload 
         cmd = f"INSERT INTO cassandra.simulations (id, b64data) VALUES ({_uuid}, '{obj_b64_string}');"
         self.__exec(cmd) 
-        pass
+        return _uuid 
 
     def get_game_transition(self, _uuid):
         'get a single game transition'

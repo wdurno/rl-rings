@@ -19,9 +19,10 @@ class PostgresConnector(__StorageABC):
             self.connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
         return self.connection 
 
-    def __exec(self, sql): 
+    def __exec(self, sql, debug=False): 
         'Execute sql. Connectivity abstracted-away.'
-        print('POSTGRES EXEC: '+str(sql)) 
+        if debug:
+            print('POSTGRES EXEC: '+str(sql)) 
         ## define attempt mechanism 
         def run_sql(sql):
             connection = self.__get_connection() 
@@ -60,11 +61,33 @@ class PostgresConnector(__StorageABC):
                    model INT4,
                    reward FLOAT4,
                    etc FLOAT4);
-               ''' ## TODO finish data model 
+               ''' ## TODO finish data model
+        sql3 = 'CREATE TABLE transitions(transition_id UUID PRIMARY KEY);'
+        sql4 = 'CREATE EXTENSION IF NOT EXISTS tsm_system_rows;'
         self.connection = psycopg2.connect(user='postgres', host=self.url, port='5432', password=self.secret)
         self.connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
-        self.__exec(sql1)
+        self.__exec(sql1, debug=True)
         self.close_connection() 
-        self.__exec(sql2)
-        pass 
+        self.__exec(sql2, debug=True)
+        self.__exec(sql3, debug=True) 
+        self.__exec(sql4, debug=True) 
+        pass
+
+    def write_transition_id(self, _uuid):
+        'write a transition uuid to postgres'
+        sql = f"INSERT INTO transitions VALUES ('{_uuid}')" 
+        self.__exec(sql) 
+        pass
+    
+    def get_total_transitions(self): 
+        sql = 'SELECT COUNT(*) FROM transitions;'
+        rows = self.__exec(sql) 
+        return rows[0][0] 
+    
+    def sample_transition_ids(self, expected_transitions: int): 
+        total_transitions = self.get_total_transitions() 
+        prob = min(100, 100*expected_transitions/total_transitions) 
+        sql = f'SELECT transition_id FROM transitions TABLESAMPLE BERNOULLI({prob});'
+        uuids = [r[0] for r in self.__exec(sql)] 
+        return uuids 
     pass 

@@ -40,16 +40,6 @@ if [ $? != 0 ]; then
   exit 1
 fi
 
-echo -e ${GREEN}postgres secret...${NC}
-. ${repo_dir}/secret/postgres/make_postgres_secret.sh
-kubectl delete secret postgres 
-kubectl create secret generic postgres --from-file=${repo_dir}/secret/postgres/postgres-secret
-
-if [ $? != 0 ]; then
-  echo -e ${RED}secret upload failed!${NC}
-  exit 1
-fi
-
 ## switching to python3 to handle build logic 
 python3 ${repo_dir}/src/python/build/build.py $@
 

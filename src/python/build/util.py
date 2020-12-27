@@ -1,5 +1,7 @@
 import os 
 import jinja2
+import random
+import string
 from subprocess import Popen, PIPE
 
 ## constants 
@@ -97,8 +99,16 @@ def helm_uninstall_build(name='build-1'):
 
 def copy_to_pod(pod_name='build-1', src=repo_dir, dst='/build'):
     'copy from local to pod remote'
-    cmd = f'kubectl cp {src} {pod_name}:{dst}' 
-    run(cmd) 
+    ## delete any old content 
+    cmd1 = f'kubectl exec -it {pod_name} -- rm -rf {dst}'
+    try: 
+        run(cmd1, os_sytem=True) 
+    except:
+        ## no need to delete that which does not exist 
+        pass 
+    ## 
+    cmd2 = f'kubectl cp {src} {pod_name}:{dst}' 
+    run(cmd2) 
     pass 
 
 def build_base_image(pod_name='build-1'):
@@ -167,9 +177,25 @@ def helm_deploy_minio():
     pass 
 
 def helm_deploy_postgres():
-    cmd = f'helm upgrade postgres {repo_dir}/src/helm/postgres --install'
-    run(cmd) 
+    ## init secret 
+    cmd1 = f'. {repo_dir}/secret/postgres/make_postgres_secret.sh'
+    cmd2 = f'kubectl delete secret postgres'
+    cmd3 = f'kubectl create secret generic postgres --from-file={repo_dir}/secret/postgres/postgres-secret'
+    run(cmd1) 
+    try: 
+        run(cmd2)
+    except:
+        ## no need to delete inexistent secret 
+        pass 
+    run(cmd3) 
+    ## deploy 
+    cmd4 = f'helm upgrade postgres {repo_dir}/src/helm/postgres --install'
+    run(cmd4) 
     pass 
+
+def random_str(n_char=5): 
+    letters = string.ascii_lowercase 
+    return ''.join(random.choice(letters) for i in range(n_char))
 
 def init_storage(): 
     ## get job template 
@@ -178,11 +204,19 @@ def init_storage():
     ## get variable for template 
     with open(f'{repo_dir}/secret/acr/server') as f: 
         docker_server = f.read() 
+    ## generate random id 
+    rand_id = random_str()  
     ## populate 
-    job_yaml = job_template.render(docker_server=docker_server) 
+    job_yaml = job_template.render(docker_server=docker_server, rand_id=rand_id) 
     ## apply 
     cmd = 'kubectl apply -f -'
     stdin = job_yaml.encode() 
     run(cmd, stdin=stdin) 
+    pass 
+
+def helm_deploy_simulation(): 
+    cmd = f'helm upgrade simulation {repo_dir}/src/helm/simulation --install '+\
+            f'--set docker_server=$(cat {repo_dir}/secret/acr/server)'
+    run(cmd) 
     pass 
 
