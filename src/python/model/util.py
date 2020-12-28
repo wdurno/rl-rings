@@ -1,5 +1,6 @@
 from connectors import mc, cc, pc
 from time import sleep 
+import torch 
 
 def get_latest_model(max_retries=2):
     '''
@@ -26,4 +27,20 @@ def upload_transition(transition, retry_delay=60):
     pass
 
 def upload_metrics():
-    pass 
+    pass
+
+def sample_transitions(n=100):
+    'randomly sample transitions, ready for `get_grads`'
+    ## pull data from db 
+    uuids = pc.sample_transition_ids(n) 
+    rows = cc.get_transitions(uuids) 
+    ## transform into tuple of columns 
+    out = [] 
+    for _ in range(6): 
+        out.append([]) 
+        pass
+    for row in rows:
+        for col in range(6): 
+            out[col].append(row[col]) 
+            pass 
+    return out 

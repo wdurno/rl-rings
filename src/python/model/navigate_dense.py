@@ -124,25 +124,32 @@ class Agent(object):
             #input()
             return proj_dist
 
+    def get_grads(self, game_transitions: tuple):
+        ## copy parameters to device 
+        self.train() 
+        ## unpack transitions tuple 
+        state_batch, action_batch, next_state_batch, reward_batch, done_batch, gam_batch = game_transitions
+        ## q estimates 
+        action_batch = action_batch.unsqueeze(1).expand(action_batch.size(0), 1, self.atoms)
+        dist_pred    = self.policy(state_batch).gather(1, action_batch).squeeze(1)
+        dist_true    = self.projection_distribution(next_state_batch, reward_batch, done_batch, gam_batch)
+        ## calc loss and grads 
+        dist_pred.data.clamp_(0.001, 0.999)
+        loss = - (dist_true * dist_pred.log()).sum(1).mean()
+        grads = autograd.grad(loss, self.policy.parameters())
+        return grads 
 
     def learn(self):
 
-        self.train()
         _loss = 0
         _Q_pred = 0
 
         if len(self.memory) < self.batch_size:
             return _loss, _Q_pred
 
-        state_batch, action_batch, next_state_batch, reward_batch, done_batch, gam_batch = self.memory.sample(self.batch_size)
-
-        action_batch = action_batch.unsqueeze(1).expand(action_batch.size(0), 1, self.atoms)
-        dist_pred    = self.policy(state_batch).gather(1, action_batch).squeeze(1)
-        dist_true    = self.projection_distribution(next_state_batch, reward_batch, done_batch, gam_batch)
-
-        dist_pred.data.clamp_(0.001, 0.999)
-        loss = - (dist_true * dist_pred.log()).sum(1).mean()
-        grads = autograd.grad(loss, self.policy.parameters())
+        transitions = self.memory.sample(self.batch_size)
+        grads = self.get_grads(transitions) 
+        
         apply_grads(grads)
 
         with torch.no_grad():
