@@ -100,9 +100,9 @@ def helm_uninstall_build(name='build-1'):
 def copy_to_pod(pod_name='build-1', src=repo_dir, dst='/build'):
     'copy from local to pod remote'
     ## delete any old content 
-    cmd1 = f'kubectl exec -it {pod_name} -- rm -rf {dst}'
+    cmd1 = f'kubectl exec -it {pod_name} -- rm -rf {dst}/*'
     try: 
-        run(cmd1, os_sytem=True) 
+        run(cmd1, os_system=True) 
     except:
         ## no need to delete that which does not exist 
         pass 
