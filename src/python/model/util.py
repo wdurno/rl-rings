@@ -1,6 +1,7 @@
 from connectors import mc, cc, pc
 from time import sleep 
 import torch 
+import os 
 
 def get_latest_model(max_retries=2):
     '''
@@ -44,3 +45,29 @@ def sample_transitions(n=100):
             out[col].append(row[col]) 
             pass 
     return out 
+
+def get_latest_model(models_dir='/models'):
+    '''
+    read latest model from postgres & minio
+    returns:
+      - `None` if no model found, `path` to local model file on disk otherwise. 
+    '''
+    ## load spec from postgres 
+    model_id, path = pc.get_latest_model_path() 
+    if model_id == 0 or path == '':
+        ## no model found 
+        return None 
+    local_path = os.path.join(models_dir, path) ## TODO minio should probably interact directly with disk 
+    if os.path.is_file(local_path): 
+        ## file already exists locally, no need to re-download 
+        return local_path 
+    ## load form MinIO
+    model_blob = mc.get(path, bucket='models') 
+    ## write to local disk 
+    with open(local_path, 'rb') as f: 
+        f.write(model_blob) 
+    return local_path 
+
+
+
+

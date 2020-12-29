@@ -11,10 +11,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch import autograd 
+from warningis import warn
 
 from deep_net import DQN
 from replay_memory import rpm
-from util import get_latest_model, upload_transition, upload_metrics    
+from util import get_latest_model, upload_transition, upload_metrics, \
+        get_latest_model 
 
 ## cluster role 
 from cluster_config import ROLE, SIMULATION_ROLE, GRADIENT_CALCULATION_ROLE, \
@@ -177,10 +179,10 @@ class Agent(object):
         return np.mean(loss), np.mean(Q)
 
     def save_model(self, path):
-        torch.save(self.policy.state_dict(),path + 'DQN.pkl')
+        torch.save(self.policy.state_dict(), path)
 
     def load_model(self, path):
-        self.policy.load_state_dict(torch.load(path + 'DQN.pkl'))
+        self.policy.load_state_dict(torch.load(path))
 
     def update_device(self, device=device):
         self.policy = self.policy.to(device=device)
@@ -349,7 +351,7 @@ def train(n_episodes):
         all_frame += frame
         if all_frame > 20000:
             time = frame // 20
-        else :
+        else:
             time = 0
         ## model fitting, if applicable 
         if ROLE == SINGLE_NODE_ROLE:
@@ -374,12 +376,82 @@ def train(n_episodes):
     env.close()
     pass 
 
-def grad_server(): 
-    ## TODO write parameter server, then implement this 
-    ## pull latest model 
-    ## sample game transitions 
-    ## calculate gradeints 
-    ## publish gradients 
+def grad_server(batch_size=100, model_wait_time=30, transition_wait_time=30): 
+    '''
+    calculate gradients for consumption by parameter server
+    inputs:
+      - `batch_size`: number of samples to pull per grad calculation 
+      - `model_wait_time` (seconds): wait this long before re-attempting, if no model is found 
+      - `transition_wait_time` (seconds): wait this long before re-attempting, if no game transitions are found
+    side-effects:
+      - Writes gradient UUIDs and timestamps to postgres
+      - Writes gradients to cassandra 
+    '''
+    ## init 
+    agent = Agent() 
+    while True: 
+        ## pull latest model 
+        model_path = get_latest_model()  
+        if model_path is None: 
+            print('No model found. Sleeping '+str(model_wait_time)+' seconds...') 
+            time.sleep(model_wait_time) 
+        else:
+            ## load model 
+            agent.load_model(model_path) 
+            agent.update_device() 
+            ## sample game transitions 
+            game_transitions = sample_transitions(batch_size) 
+            if len(game_transitions) < 3: 
+                warn('Sampled transition of length zero! Sleeping '+str(transition_wait_time)+' seconds...') 
+                time.sleep(transition_wait_time) 
+            else: 
+                ## calculate gradeints 
+                grads = agent.get_grads(game_transitions) 
+                ## publish gradients 
+                grad_uuid = pc.get_registered_grad_id() 
+                cc.insert_gradient(grad_uuid, grads) 
+    pass
+
+def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publish_frequency: int=60): 
+    '''
+    integrate gradients, publish models
+    inputs:
+      - `model`: model prefix for writing to MinIO 
+      - `grad_wait_time`: if no gradients are found, wait this long before reattempting 
+      - `model_publish_frequency`: wait at least this long before publishing an updated model 
+    side-effects:
+      - writes latest model definition to Postgres
+      - writes latest model blob to MinIO
+    '''
+    ## init
+    agent = Agent() 
+    agent.update_device() 
+    ## check for latest model
+    model_id, model_minio_path = get_latest_model_path() 
+    if model_id == 0 or model_minio_path == '': 
+        ## no model found, publish first 
+        print('No model found, writing first...') 
+        model_id += 1 
+        path = str(model_name) + '-' + str(model_id) + '-DQN.pkl' 
+        agent.save_model() ## TODO write to minio 
+        pass
+    last_publish_time = time.time() 
+    while True:
+        ## get new gradients 
+        ## TODO 
+        grads = [] 
+        if len(grads) == 0:
+            ## wait for new grads 
+            print('No new grads found. Sleeping '+str(grad_wait_time)+' seconds...') 
+            time.sleep(grad_wait_time) 
+        else: 
+            ## integrate grads 
+            ## TODO 
+            if time.time() - last_publish_time > model_publish_frequency:
+                ## publish model 
+                ## TODO 
+                print('model written...') 
+                pass 
     pass 
 
 if __name__ == '__main__':
@@ -387,3 +459,7 @@ if __name__ == '__main__':
         train(10000)
     if ROLE == SIMULATION_ROLE:
         train(None) 
+    if ROLE == GRADIENT_CALCULATION_ROLE:
+        grad_server() 
+    if ROLE == PARAMETER_SERVER_ROLE:
+        parameter_server() 
