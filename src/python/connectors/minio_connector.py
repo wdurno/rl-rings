@@ -41,7 +41,8 @@ class MinIOConnector(__StorageABC):
         You should only need to run this once. 
         '''
         connection = self.__get_connection() 
-        connection.make_bucket('models')
+        connection.make_bucket('models') 
+        print('MinIO bucket made: `models`') 
         pass
 
     def get(self, path, bucket='models'):

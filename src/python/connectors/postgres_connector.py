@@ -2,6 +2,9 @@
 from connectors.storageABC import __StorageABC
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
+import uuid 
+from datetime import datetime 
+import pandas 
 
 class PostgresConnector(__StorageABC): 
     'Manipulate a postgres instance'
@@ -63,14 +66,20 @@ class PostgresConnector(__StorageABC):
                    etc FLOAT4);
                ''' ## TODO finish data model
         sql3 = 'CREATE TABLE transitions(transition_id UUID PRIMARY KEY);'
-        sql4 = 'CREATE EXTENSION IF NOT EXISTS tsm_system_rows;'
+        sql4 = 'CREATE TABLE grad_ids(grad_id UUID PRIMARY KEY, timestamp TIMESTAMP);'
+        sql5 = 'CREATE TABLE latest_model(model_id INT4 PRIMARY KEY, path TEXT);'
+        sql6 = "INSERT INTO latest_model VALUES (0, '');" 
+        ## init DB requires special connection 
         self.connection = psycopg2.connect(user='postgres', host=self.url, port='5432', password=self.secret)
         self.connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
         self.__exec(sql1, debug=True)
         self.close_connection() 
-        self.__exec(sql2, debug=True)
+        ## normal requests with normal connections 
+        self.__exec(sql2, debug=True) 
         self.__exec(sql3, debug=True) 
         self.__exec(sql4, debug=True) 
+        self.__exec(sql5, debug=True) 
+        self.__exec(sql6, debug=True)
         pass
 
     def write_transition_id(self, _uuid):
@@ -90,4 +99,45 @@ class PostgresConnector(__StorageABC):
         sql = f'SELECT transition_id FROM transitions TABLESAMPLE BERNOULLI({prob});'
         uuids = [r[0] for r in self.__exec(sql)] 
         return uuids 
+
+    def set_model_path(self, path: str): 
+        'update model details for general consumption'
+        ## execute update 
+        sql1 = f"UPDATE latest_model SET model_id = model_id+1, path = '{path}';" 
+        self.__exec(sql1) 
+        ## verify legitimacy 
+        sql2 = 'SELECT model_id FROM latest_model'
+        model_id_row_list = self.__exec(sql2) 
+        if len(model_id_row_list) != 1: 
+            raise Exception('Postgres table `latest_model` should have exactly 1 row!') 
+        ## return model_id
+        return model_id_row_list[0][0] 
+
+    def get_latest_model_path(self): 
+        'get latest MinIO path to model, returning (model_id, path)'
+        sql = 'SELECT model_id, path FROM latest_model;'
+        row_list = self.__exec(sql) 
+        model_id = row_list[0][0] 
+        path = row_list[0][1] 
+        return model_id, path 
+
+    def get_registered_grad_id(self): 
+        'register a gradient uuid with postgres and return it'
+        ## define 
+        grad_id = uuid.uuid1() 
+        timestamp = datetime.now()  
+        ## register 
+        sql = f'INSERT INTO grad_ids VALUES ({grad_id}, {timestamp});' 
+        self.__exec(sql) 
+        return grad_id 
+
+    def get_grad_ids_after_timestamp(self, timestap): 
+        'returns dataframe of columns (grad_id, ts) where ts > timestamp'
+        ## get data 
+        sql = f'SELECT grad_id, timestamp FROM grad_ids WHERE timestamp > {timestamp};'
+        rows = self.__exec(sql) 
+        ## format as dataframe 
+        grad_ids = [row[0] for row in rows] 
+        timestamps = [row[1] for row in rows] 
+        return pd.DataFrame({'grad_id': grad_ids, 'timestap': timestaps}) 
     pass 

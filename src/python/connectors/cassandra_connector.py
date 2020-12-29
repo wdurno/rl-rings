@@ -8,6 +8,7 @@ import base64
 
 class CassandraConnector(__StorageABC):
     'Cassanda storage connector'
+    ## TODO refactor data model to store all (UUID, b64 TEXT) together 
     
     def __init__(self, url): 
         'init storage interface instance'
@@ -69,24 +70,35 @@ class CassandraConnector(__StorageABC):
             b64data text  
         );
         '''  
+        cmd3 = '''
+        CREATE TABLE IF NOT EXISTS cassandra.gradients (
+            id uuid PRIMARY KEY,
+            b64data text 
+        ); 
+        '''
         self.__exec(cmd1, debug=True) 
         self.__exec(cmd2, debug=True) 
+        self.__exec(cmd3, debug=True) 
         pass 
     
+    def __unpack_obj(self, b64_str):
+        'b64_str -> obj'
+        return pickle.loads(base64.b64decode(b64_str.encode())) 
+
+    def __pack_obj(self, obj): 
+        'obj -> b64_str'
+        return base64.b64encode(pickle.dumps(obj)).decode()  
+
     def insert_game_transition(self, obj): 
         'upload a single game transition'
         ## get base64 representation 
-        obj_b64_string = base64.b64encode(pickle.dumps(obj)).decode() 
+        obj_b64_string = self.__pack_obj(obj)  
         ## generate key 
         _uuid = str(uuid.uuid1()) 
         ## upload 
         cmd = f"INSERT INTO cassandra.simulations (id, b64data) VALUES ({_uuid}, '{obj_b64_string}');"
         self.__exec(cmd) 
         return _uuid 
-
-    def __unpack_transition(self, b64_str):
-        'b64_str -> game transition'
-        return pickle.loads(base64.b64decode(b64_str.encode())) 
 
     def get_game_transition(self, _uuid):
         'get a single game transition'
@@ -95,7 +107,7 @@ class CassandraConnector(__StorageABC):
         row_list = self.__exec(cmd) 
         ## unpack single item 
         obj_b64_string = row_list[0].b64data 
-        return self.__unpack_transition(obj_b64_string) 
+        return self.__unpack_obj(obj_b64_string) 
 
     def get_all_game_transition_uuids(self):
         ## download data 
@@ -104,15 +116,21 @@ class CassandraConnector(__StorageABC):
         ## unpack 
         return [row.id for row in row_list]
 
-    def get_transitions(self, uuid_list): 
+    def get_transitions(self, uuid_list):
+        return self.__get_objs(uuid_list, 'simulations') 
+
+    def get_gradients(self, uuid_list): 
+        return self.__get_objs(uuid_list, 'gradients') 
+
+    def __get_objs(self, uuid_list, table): 
         ## start async requests 
         async_responses = [] 
         for _uuid in uuid_list: 
-            cql = f'SELECT b64data FROM cassandra.simulations WHERE id={_uuid};' 
+            cql = f'SELECT b64data FROM cassandra.{table} WHERE id={_uuid};' 
             async_response = self.__exec(cql) 
             async_responses.append(async_response) 
         ## get async responses 
-        transitions = [] 
+        objs = [] 
         for response in async_responses:
             if type(response) != list: 
                 ## wait for response 
@@ -122,9 +140,22 @@ class CassandraConnector(__StorageABC):
             if len(b64_str_list) > 0: 
                 ## first row, first column 
                 b64_str = b64_str_list[0][0] 
-                transition = self.__unpack_transition(b64_str) 
-                transitions.append(transition) 
-        return transitions 
+                obj = self.__unpack_obj(b64_str) 
+                objs.append(obj) 
+                pass 
+        return objs
+
+    def insert_gradient(self, _uuid, grad): 
+        grad_b64_str = self.__pack_obj(grad) 
+        cmd = f"INSERT INTO cassandra.gradients (id, b64data) VALUES ({_uuid}, '{grad_b64_str}');"
+        self.__exec(cmd) 
+        pass 
+
+    def get_gradient(self, _uuid): 
+        cmd = f'SELECT b64data FROM cassandra.gradients WHERE id={_uuid};' 
+        row_list = self.__exec(cmd) 
+        grad = self.__unpack_obj(row_list[0].b64data) 
+        return grad 
     pass 
 
 

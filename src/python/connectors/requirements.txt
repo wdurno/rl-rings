@@ -1,3 +1,4 @@
 minio
 #psycopg2 ## postgres lib installed via apt-get 
 cassandra-driver 
+pandas 

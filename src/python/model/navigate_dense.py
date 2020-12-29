@@ -368,9 +368,19 @@ def train(n_episodes):
         pass
 
     # reset rpm
-    agent1.memory.clear()
-    agent1.save_model('train/')
+    if ROLE == SINGLE_NODE_ROLE: 
+        agent1.memory.clear()
+        agent1.save_model('train/')
     env.close()
+    pass 
+
+def grad_server(): 
+    ## TODO write parameter server, then implement this 
+    ## pull latest model 
+    ## sample game transitions 
+    ## calculate gradeints 
+    ## publish gradients 
+    pass 
 
 if __name__ == '__main__':
     if ROLE == SINGLE_NODE_ROLE: 
