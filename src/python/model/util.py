@@ -57,7 +57,7 @@ def get_latest_model(models_dir='/models'):
     if model_id == 0 or path == '':
         ## no model found 
         return None 
-    local_path = os.path.join(models_dir, path) ## TODO minio should probably interact directly with disk 
+    local_path = os.path.join(models_dir, path) 
     if os.path.is_file(local_path): 
         ## file already exists locally, no need to re-download 
         return local_path 

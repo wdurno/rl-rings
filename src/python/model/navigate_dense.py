@@ -11,12 +11,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch import autograd 
-from warningis import warn
+from warnings import warn
 
 from deep_net import DQN
 from replay_memory import rpm
-from util import get_latest_model, upload_transition, upload_metrics, \
-        get_latest_model 
+from util import get_latest_model, upload_transition, upload_metrics 
 
 ## cluster role 
 from cluster_config import ROLE, SIMULATION_ROLE, GRADIENT_CALCULATION_ROLE, \
@@ -152,7 +151,7 @@ class Agent(object):
         transitions = self.memory.sample(self.batch_size)
         grads = self.get_grads(transitions) 
         
-        apply_grads(grads)
+        self.apply_grads(grads)
 
         with torch.no_grad():
             _loss = float(loss)
@@ -433,24 +432,32 @@ def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publ
         print('No model found, writing first...') 
         model_id += 1 
         path = str(model_name) + '-' + str(model_id) + '-DQN.pkl' 
-        agent.save_model() ## TODO write to minio 
+        local_path = os.path.join('/models', path) ## TODO code duplication, refactor needed 
+        agent.save_model(local_path) 
+        with open(local_path, 'rb') as f:
+            mc.set(path, f.read()) 
         pass
     last_publish_time = time.time() 
     while True:
         ## get new gradients 
-        ## TODO 
-        grads = [] 
+        grad_uuid_list = get_grad_ids_after_timestamp(timestamp) ## TODO get timestamp 
+        grads = cc.get_gradients(grad_uuid_list)  
         if len(grads) == 0:
             ## wait for new grads 
             print('No new grads found. Sleeping '+str(grad_wait_time)+' seconds...') 
             time.sleep(grad_wait_time) 
         else: 
             ## integrate grads 
-            ## TODO 
+            agent.apply_grads(grads)  
             if time.time() - last_publish_time > model_publish_frequency:
                 ## publish model 
-                ## TODO 
-                print('model written...') 
+                model_id += 1 
+                path = str(model_name) + '-' + str(model_id) + '-DQN.pkl' 
+                local_path = os.path.join('/models', ) ## TODO global variable, put in config 
+                agent.save_model(local_path) 
+                with open(local_path, 'rb') as f:
+                    mc.set(path, f.read()) 
+                print('model written: '+str(path)) 
                 pass 
     pass 
 

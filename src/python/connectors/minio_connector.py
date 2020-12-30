@@ -50,7 +50,7 @@ class MinIOConnector(__StorageABC):
         connection = self.__get_connection() 
         try:
             r = connection.get_object(bucket, path) 
-            blob = r.read() ## TODO is this correct? 
+            blob = r.read() 
         except Exception as e:
             raise e 
         finally: 
@@ -61,6 +61,7 @@ class MinIOConnector(__StorageABC):
     def set(self, path, blob: bytes, bucket='models'): 
         'write a blob to storage'
         connection = self.__get_connection() 
-        return connection.put_object(bucket, path, io.BytesIO(blob)) 
+        connection.put_object(bucket, path, io.BytesIO(blob), len(blob))
+        pass 
     pass 
 
