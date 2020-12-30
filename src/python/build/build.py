@@ -42,8 +42,10 @@ if args.phase_3:
     helm_deploy_simulation_storage()
     helm_deploy_minio() 
     helm_deploy_postgres() 
-    init_storage() 
+    init_storage() ## blocks until complete 
+    helm_deploy_parameter_server() 
     helm_deploy_simulation() 
+    helm_deploy_gradient_calculation() 
     pass
 
 if args.clean_up_compute:

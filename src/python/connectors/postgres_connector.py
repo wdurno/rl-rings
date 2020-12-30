@@ -3,7 +3,7 @@ from connectors.storageABC import __StorageABC
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
 import uuid 
-from datetime import datetime 
+from datetime import datetime, timedelta  
 import pandas 
 
 class PostgresConnector(__StorageABC): 
@@ -69,6 +69,7 @@ class PostgresConnector(__StorageABC):
         sql4 = 'CREATE TABLE grad_ids(grad_id UUID PRIMARY KEY, timestamp TIMESTAMP);'
         sql5 = 'CREATE TABLE latest_model(model_id INT4 PRIMARY KEY, path TEXT);'
         sql6 = "INSERT INTO latest_model VALUES (0, '');" 
+        sql7 = 'CREATE TABLE parameter_server_state(last_model_publish_time TIMESTAMP, last_grad_time TIMESTAMP)'
         ## init DB requires special connection 
         self.connection = psycopg2.connect(user='postgres', host=self.url, port='5432', password=self.secret)
         self.connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
@@ -79,7 +80,8 @@ class PostgresConnector(__StorageABC):
         self.__exec(sql3, debug=True) 
         self.__exec(sql4, debug=True) 
         self.__exec(sql5, debug=True) 
-        self.__exec(sql6, debug=True)
+        self.__exec(sql6, debug=True) 
+        self.__exec(sql7, debug=True) 
         pass
 
     def write_transition_id(self, _uuid):
@@ -140,4 +142,32 @@ class PostgresConnector(__StorageABC):
         grad_ids = [row[0] for row in rows] 
         timestamps = [row[1] for row in rows] 
         return pd.DataFrame({'grad_id': grad_ids, 'timestap': timestaps}) 
-    pass 
+
+    def get_parameter_server_state(self): 
+        '''
+        Gets state, initializing if necessary.
+        Returns (last_model_publish_time, last_grad_time) 
+        '''
+        ## get rows 
+        sql = 'SELECT last_model_publish_time, last_grad_time FROM parameter_server_state;'
+        rows = self.__exec(sql) 
+        if len(rows) < 1:
+            ## need to init 
+            now = datetime.now() 
+            sql = f'INSERT INTO parameter_server_state VALUES ({now}, {now});'
+            self.__exec(sql) 
+            return now, now
+        ## no need to init 
+        return rows[0][0], rows[0][1] 
+
+    def update_parameter_server_state(self, last_model_publish_time=None, last_grad_time=None): 
+        if last_model_publish_time is not None:
+            sql1 = f'UPDATE parameter_server_state SET last_model_publish_time={last_model_publish_time};'
+            self.__exec(sql1) 
+            pass
+        if last_grad_time is not None:
+            sql2 = f'UPDATE parameter_server_state SET last_grad_time={last_grad_time};'
+            self.__exec(sql2) 
+            pass 
+        pass 
+    pass

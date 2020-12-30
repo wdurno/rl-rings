@@ -209,9 +209,12 @@ def init_storage():
     ## populate 
     job_yaml = job_template.render(docker_server=docker_server, rand_id=rand_id) 
     ## apply 
-    cmd = 'kubectl apply -f -'
+    cmd1 = 'kubectl apply -f -'
     stdin = job_yaml.encode() 
-    run(cmd, stdin=stdin) 
+    run(cmd1, stdin=stdin) 
+    ## block until complete 
+    cmd2 = f'kubectl wait --for=condition=complete job/init-storage-{rand_id}' 
+    run(cmd2) 
     pass 
 
 def helm_deploy_simulation(): 
@@ -219,4 +222,17 @@ def helm_deploy_simulation():
             f'--set docker_server=$(cat {repo_dir}/secret/acr/server)'
     run(cmd) 
     pass 
+
+def helm_deploy_parameter_server(): 
+    cmd = f'helm upgrade parameter-server {repo_dir}/src/helm/parameter-server --install '+\
+            f'--set docker_server=$(cat {repo_dir}/secret/acr/server)'
+    run(cmd) 
+    pass 
+
+def helm_deploy_gradient_calculation(): 
+    cmd = f'helm upgrade gradient-calculation {repo_dir}/src/helm/gradient-calcuation --install '+\
+            f'--set docker_server=$(cat {repo_dir}/secret/acr/server)'
+    run(cmd) 
+    pass
+
 

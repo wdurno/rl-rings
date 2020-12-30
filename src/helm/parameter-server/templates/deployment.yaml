@@ -4,24 +4,24 @@ metadata:
     name: {{ .Values.name }} 
     labels:
       name: {{ .Values.name }}
-      app: simulation 
+      app: parameter-server 
 spec:
-  replicas: {{ .Values.replicas }} 
+  replicas: 1
   selector:
     matchLabels:
-      app: simulation 
+      app: parameter-server 
   template:
     metadata:
       labels:
         name: {{ .Values.name }} 
-        app: simulation
+        app: parameter-server
     spec: 
       containers: 
         - name: {{ .Values.name }} 
           image: {{ .Values.docker_server }}/ai:v0.0.1
           env:
             - name: DISTRIBUTED_ROLE 
-              value: SIMULATION
+              value: PARAMETER_SERVER 
             - name: MINIO_ACCESSKEY
               valueFrom:
                 secretKeyRef:
@@ -41,7 +41,7 @@ spec:
           imagePullPolicy: Always
           resources:
             requests:
-              memory: "4000Mi"
+              memory: "3500Mi"
               cpu: "1500m"
           volumeMounts:
             - name: models-vol

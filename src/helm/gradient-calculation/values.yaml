@@ -1,0 +1,5 @@
+
+name: "gradient-calculation"
+docker_server: ""
+replicas: 2 
+
