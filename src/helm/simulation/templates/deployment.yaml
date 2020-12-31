@@ -18,7 +18,7 @@ spec:
     spec: 
       containers: 
         - name: {{ .Values.name }} 
-          image: {{ .Values.docker_server }}/ai:v0.0.1
+          image: {{ .Values.docker_server }}/ai:{{ .Values.ai_image_tag }}
           env:
             - name: DISTRIBUTED_ROLE 
               value: SIMULATION

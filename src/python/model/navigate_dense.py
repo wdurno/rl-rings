@@ -1,3 +1,4 @@
+import os 
 import gym
 import math
 import time
@@ -12,11 +13,12 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch import autograd
 from datetime import datetime, timedelta 
+from connectors import pc, cc, mc 
 from warnings import warn
 
 from deep_net import DQN
 from replay_memory import rpm
-from util import get_latest_model, upload_transition, upload_metrics 
+from util import get_latest_model, upload_transition, upload_metrics, sample_transitions  
 
 ## cluster role 
 from cluster_config import ROLE, SIMULATION_ROLE, GRADIENT_CALCULATION_ROLE, \
@@ -240,7 +242,7 @@ class Agent(object):
                         self.memory.push(*game_transition)
                     if ROLE == SIMULATION_ROLE:
                         ## upload to cassandra 
-                        upload_transition(game_transition) 
+                        upload_transition(game_transition[0]) ## dropping importance  
 
             if done and not test:
                 for i in range(TD_step-1):
@@ -257,7 +259,7 @@ class Agent(object):
                         self.memory.push(*game_transition) 
                     if ROLE == SIMULATION_ROLE:
                         ## upload to cassandra 
-                        upload_transition(game_transition) 
+                        upload_transition(game_transition[0]) ## dropping importance  
 
 
         if not test:
@@ -331,7 +333,7 @@ def train(n_episodes):
             path = get_latest_model() 
             if path is not None: 
                 ## latest model obtained
-                load_model(path)  
+                agent1.load_model(path)  
         ## continue loop? 
         i_episode += 1 
         if n_episodes is not None: 
@@ -403,7 +405,10 @@ def grad_server(batch_size=100, model_wait_time=30, transition_wait_time=30):
             game_transitions = sample_transitions(batch_size) 
             if len(game_transitions) < 3: 
                 warn('Sampled transition of length zero! Sleeping '+str(transition_wait_time)+' seconds...') 
-                time.sleep(transition_wait_time) 
+                time.sleep(transition_wait_time)
+            elif len(game_transitions[0]) < 3:
+                warn('Sampled too few transitions! Sleeping '+str(transition_wait_time)+' seconds...')
+                time.sleep(transition_wait_time)
             else: 
                 ## calculate gradeints 
                 grads = agent.get_grads(game_transitions) 
@@ -429,7 +434,7 @@ def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publ
     ## get state 
     last_publish_time, last_grad_time = pc.get_parameter_server_state() 
     ## check for latest model
-    model_id, model_minio_path = get_latest_model_path() 
+    model_id, model_minio_path = pc.get_latest_model_path() 
     ## cast constants 
     grad_wait_time = timedelta(seconds=grad_wait_time) 
     model_publish_frequency = timedelta(seconds=model_publish_frequency) 
@@ -442,36 +447,44 @@ def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publ
         agent.save_model(local_path) 
         with open(local_path, 'rb') as f:
             mc.set(path, f.read()) 
+            pass
+        pc.set_model_path(path) 
         pass
     while True:
         ## get new gradients 
-        grad_uuid_time.df = get_grad_ids_after_timestamp(last_grad_time) 
-        grad_uuid_list = grad_uuid_time.grad_id.to_list() 
-        grads = cc.get_gradients(grad_uuid_list)  
-        last_grad_time = grad_uuid_time.timestamp.max() 
-        pc.update_parameter_server_state(last_grad_time=last_grad_time) 
-        if len(grads) == 0:
+        grad_uuid_time_df = pc.get_grad_ids_after_timestamp(last_grad_time) 
+        if grad_uuid_time_df.shape[0] == 0: 
             ## wait for new grads 
-            print('No new grads found. Sleeping '+str(grad_wait_time)+' seconds...') 
-            time.sleep(grad_wait_time) 
+            print('No new grad IDs found. Sleeping '+str(grad_wait_time)+' seconds...') 
+            time.sleep(grad_wait_time.seconds) 
         else: 
-            ## integrate grads 
-            agent.apply_grads(grads) 
-            current_time = datetime.now() 
-            if current_time - last_publish_time > model_publish_frequency:
-                ## publish model 
-                model_id += 1 
-                path = str(model_name) + '-' + str(model_id) + '-DQN.pkl' 
-                local_path = os.path.join('/models', ) ## TODO global variable, put in config 
-                agent.save_model(local_path) 
-                with open(local_path, 'rb') as f:
-                    mc.set(path, f.read()) 
+            grad_uuid_list = grad_uuid_time_df.grad_id.to_list() 
+            grads = cc.get_gradients(grad_uuid_list)  
+            last_grad_time = grad_uuid_time_df.timestamp.max() 
+            pc.update_parameter_server_state(last_grad_time=last_grad_time) 
+            if len(grads) == 0:
+                ## wait for new grads 
+                print('No new grads found. Sleeping '+str(grad_wait_time)+' seconds...') 
+                time.sleep(grad_wait_time.seconds) 
+            else: 
+                ## integrate grads 
+                agent.apply_grads(grads) 
+                current_time = datetime.now() 
+                if current_time - last_publish_time > model_publish_frequency:
+                    ## publish model 
+                    model_id += 1 
+                    path = str(model_name) + '-' + str(model_id) + '-DQN.pkl' 
+                    local_path = os.path.join('/models', ) ## TODO global variable, put in config 
+                    agent.save_model(local_path) 
+                    with open(local_path, 'rb') as f:
+                        mc.set(path, f.read()) 
+                        pass 
+                    pc.set_model_path(path) 
+                    ## update time 
+                    last_publish_time = current_time 
+                    pc.update_parameter_server_state(last_model_publish_time=last_publish_time) 
+                    print('model written: '+str(path)) 
                     pass 
-                ## update time 
-                last_publish_time = current_time 
-                pc.update_parameter_server_state(last_model_publish_time=last_publish_time) 
-                print('model written: '+str(path)) 
-                pass 
     pass 
 
 if __name__ == '__main__':

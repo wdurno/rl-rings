@@ -1,5 +1,6 @@
 
 name: "simulation"
 docker_server: ""
-replicas: 2 
+ai_image_tag: "" 
+replicas: 2
 

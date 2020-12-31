@@ -49,15 +49,16 @@ def run(cmd: str, stdin: str=None):
         raise OSError(exit_code)
     pass
 
-def init_storage():
+def init_debug():
     ## get job template
     with open(f'{repo_dir}/src/k8s/debug-pod.yaml', 'r') as f:
         pod_template = jinja2.Template(f.read())
-    ## get variable for template
+    ## get variables for template
     with open(f'{repo_dir}/secret/acr/server') as f:
         docker_server = f.read()
+    ai_image_tag = os.environ.get('rl_hypothesis_2_ai_image_tag') 
     ## populate
-    pod_yaml = pod_template.render(docker_server=docker_server)
+    pod_yaml = pod_template.render(docker_server=docker_server, ai_image_tag=ai_image_tag)
     ## apply
     cmd = 'kubectl apply -f -'
     stdin = pod_yaml.encode()
@@ -65,5 +66,5 @@ def init_storage():
     pass
 
 if __name__ == '__main__':
-    init_storage() 
+    init_debug() 
 

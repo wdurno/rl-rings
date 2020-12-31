@@ -1,4 +1,5 @@
 
 name: "parameter-server"
 docker_server: ""
+ai_image_tag: "" 
 

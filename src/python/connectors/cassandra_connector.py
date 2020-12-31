@@ -135,7 +135,8 @@ class CassandraConnector(__StorageABC):
             if type(response) != list: 
                 ## wait for response 
                 b64_str_list = response.result() 
-                pass
+            else:
+                b64_str_list = response 
             ## skip empty responses 
             if len(b64_str_list) > 0: 
                 ## first row, first column 

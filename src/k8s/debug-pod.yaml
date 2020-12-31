@@ -10,7 +10,7 @@ metadata:
 spec:
     containers:
       - name: init-storage
-        image: {{ docker_server }}/ai:v0.0.1
+        image: {{ docker_server }}/ai:{{ ai_image_tag }}
         env:
           - name: MINIO_ACCESSKEY
             valueFrom:
@@ -31,6 +31,12 @@ spec:
           - "python3"
           - "-u"
           - "/app/src/python/debug/debug_mode.py"
+        volumeMounts: 
+          - name: models-vol
+            mountPath: /models
         imagePullPolicy: Always
     imagePullSecrets:
       - name: acr-creds
+    volumes:
+      - name: models-vol
+        emptyDir: {} 

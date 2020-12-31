@@ -3,6 +3,9 @@ from time import sleep
 import torch 
 import os 
 
+## constants 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+
 def upload_transition(transition, retry_delay=60):
     continue_attempting = True 
     while continue_attempting: 
@@ -34,7 +37,11 @@ def sample_transitions(n=100):
     for row in rows:
         for col in range(6): 
             out[col].append(row[col]) 
-            pass 
+            pass
+    ## convert to tensors 
+    for col in range(6): 
+        tensor = torch.stack(tuple(out[col])) 
+        out[col] = tensor.to(device) 
     return out 
 
 def get_latest_model(models_dir='/models'):
@@ -49,13 +56,13 @@ def get_latest_model(models_dir='/models'):
         ## no model found 
         return None 
     local_path = os.path.join(models_dir, path) 
-    if os.path.is_file(local_path): 
+    if os.path.isfile(local_path): 
         ## file already exists locally, no need to re-download 
         return local_path 
     ## load form MinIO
     model_blob = mc.get(path, bucket='models') 
     ## write to local disk 
-    with open(local_path, 'rb') as f: 
+    with open(local_path, 'wb') as f: 
         f.write(model_blob) 
     return local_path 
 

@@ -19,7 +19,10 @@ UNDERLINE = '\033[4m'
 ## path to main repo dir 
 repo_dir = os.environ.get('repo_dir')
 if repo_dir is None:
-    raise ValueError(FAIL+'Please set `repo-dir` environment variable!'+NC) 
+    raise ValueError(FAIL+'Please set `repo-dir` environment variable!'+NC)
+ai_image_tag = os.environ.get('rl_hypothesis_2_ai_image_tag')
+if ai_image_tag is None: 
+    raise ValueError(FAIL+'Please set `rl_hypothesis_2_ai_image_tag` environment variable!'+NC)
 
 def run(cmd: str, stdin: str=None, os_system: bool=False):
     'Execute a string as a blocking, exception-raising system call'
@@ -83,7 +86,7 @@ def helm_deploy_build(name='build-1', blocking=True):
     'deploy a DinD pod'
     ## deploy build 
     cmd1 = f'helm upgrade {name} {repo_dir}/src/helm/build/ --install '+\
-        f'--set name={name}'
+        f'--set name={name} ' 
     run(cmd1) 
     if blocking:
         ## wait until deployed 
@@ -101,14 +104,18 @@ def copy_to_pod(pod_name='build-1', src=repo_dir, dst='/build'):
     'copy from local to pod remote'
     ## delete any old content 
     cmd1 = f'kubectl exec -it {pod_name} -- rm -rf {dst}/*'
+    cmd2 = f'kubectl exec -it {pod_name} -- rm /root/rl-hypothesis-2-config.sh'
     try: 
         run(cmd1, os_system=True) 
+        run(cmd2, os_system=True) 
     except:
         ## no need to delete that which does not exist 
         pass 
     ## 
-    cmd2 = f'kubectl cp {src} {pod_name}:{dst}' 
-    run(cmd2) 
+    cmd3 = f'kubectl cp {src} {pod_name}:{dst}' 
+    cmd4 = f'kubectl cp ~/rl-hypothesis-2-config.sh {pod_name}:/root/rl-hypothesis-2-config.sh'
+    run(cmd3) 
+    run(cmd4)  
     pass 
 
 def build_base_image(pod_name='build-1'):
@@ -131,7 +138,8 @@ def helm_deploy_phase_2_pod(name='phase-2'):
     'deploys phase 2 pod for single-node AI processing'
     cmd = f'helm upgrade {name} {repo_dir}/src/helm/phase-2 --install '+\
         f'--set name={name} '+\
-        f'--set docker_server=$(cat {repo_dir}/secret/acr/server)'
+        f'--set docker_server=$(cat {repo_dir}/secret/acr/server) '+\
+        f'--set ai_image_tag="{ai_image_tag}"'
     run(cmd) 
     pass
 
@@ -213,25 +221,28 @@ def init_storage():
     stdin = job_yaml.encode() 
     run(cmd1, stdin=stdin) 
     ## block until complete 
-    cmd2 = f'kubectl wait --for=condition=complete job/init-storage-{rand_id}' 
+    cmd2 = f'kubectl wait --timeout=-1s --for=condition=complete job/init-storage-{rand_id}' 
     run(cmd2) 
     pass 
 
 def helm_deploy_simulation(): 
     cmd = f'helm upgrade simulation {repo_dir}/src/helm/simulation --install '+\
-            f'--set docker_server=$(cat {repo_dir}/secret/acr/server)'
+            f'--set docker_server=$(cat {repo_dir}/secret/acr/server) '+\
+            f'--set ai_image_tag="{ai_image_tag}"'
     run(cmd) 
     pass 
 
 def helm_deploy_parameter_server(): 
     cmd = f'helm upgrade parameter-server {repo_dir}/src/helm/parameter-server --install '+\
-            f'--set docker_server=$(cat {repo_dir}/secret/acr/server)'
+            f'--set docker_server=$(cat {repo_dir}/secret/acr/server) '+\
+            f'--set ai_image_tag="{ai_image_tag}"'
     run(cmd) 
     pass 
 
 def helm_deploy_gradient_calculation(): 
-    cmd = f'helm upgrade gradient-calculation {repo_dir}/src/helm/gradient-calcuation --install '+\
-            f'--set docker_server=$(cat {repo_dir}/secret/acr/server)'
+    cmd = f'helm upgrade gradient-calculation {repo_dir}/src/helm/gradient-calculation --install '+\
+            f'--set docker_server=$(cat {repo_dir}/secret/acr/server) '+\
+            f'--set ai_image_tag="{ai_image_tag}"'
     run(cmd) 
     pass
 

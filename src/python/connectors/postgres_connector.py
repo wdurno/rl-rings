@@ -4,7 +4,7 @@ import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
 import uuid 
 from datetime import datetime, timedelta  
-import pandas 
+import pandas as pd 
 
 class PostgresConnector(__StorageABC): 
     'Manipulate a postgres instance'
@@ -95,8 +95,10 @@ class PostgresConnector(__StorageABC):
         rows = self.__exec(sql) 
         return rows[0][0] 
     
-    def sample_transition_ids(self, expected_transitions: int): 
+    def sample_transition_ids(self, expected_transitions: int):
         total_transitions = self.get_total_transitions() 
+        if total_transitions == 0:
+            return [] 
         prob = min(100, 100*expected_transitions/total_transitions) 
         sql = f'SELECT transition_id FROM transitions TABLESAMPLE BERNOULLI({prob});'
         uuids = [r[0] for r in self.__exec(sql)] 
@@ -129,19 +131,19 @@ class PostgresConnector(__StorageABC):
         grad_id = uuid.uuid1() 
         timestamp = datetime.now()  
         ## register 
-        sql = f'INSERT INTO grad_ids VALUES ({grad_id}, {timestamp});' 
+        sql = f"INSERT INTO grad_ids VALUES ('{grad_id}', '{timestamp}');" 
         self.__exec(sql) 
         return grad_id 
 
-    def get_grad_ids_after_timestamp(self, timestap): 
+    def get_grad_ids_after_timestamp(self, timestamp): 
         'returns dataframe of columns (grad_id, ts) where ts > timestamp'
         ## get data 
-        sql = f'SELECT grad_id, timestamp FROM grad_ids WHERE timestamp > {timestamp};'
+        sql = f"SELECT grad_id, timestamp FROM grad_ids WHERE timestamp > '{timestamp}';"
         rows = self.__exec(sql) 
         ## format as dataframe 
         grad_ids = [row[0] for row in rows] 
         timestamps = [row[1] for row in rows] 
-        return pd.DataFrame({'grad_id': grad_ids, 'timestap': timestaps}) 
+        return pd.DataFrame({'grad_id': grad_ids, 'timestamp': timestamps}) 
 
     def get_parameter_server_state(self): 
         '''
@@ -154,7 +156,7 @@ class PostgresConnector(__StorageABC):
         if len(rows) < 1:
             ## need to init 
             now = datetime.now() 
-            sql = f'INSERT INTO parameter_server_state VALUES ({now}, {now});'
+            sql = f"INSERT INTO parameter_server_state VALUES ('{now}', '{now}');"
             self.__exec(sql) 
             return now, now
         ## no need to init 
@@ -162,11 +164,11 @@ class PostgresConnector(__StorageABC):
 
     def update_parameter_server_state(self, last_model_publish_time=None, last_grad_time=None): 
         if last_model_publish_time is not None:
-            sql1 = f'UPDATE parameter_server_state SET last_model_publish_time={last_model_publish_time};'
+            sql1 = f"UPDATE parameter_server_state SET last_model_publish_time='{last_model_publish_time}';"
             self.__exec(sql1) 
             pass
         if last_grad_time is not None:
-            sql2 = f'UPDATE parameter_server_state SET last_grad_time={last_grad_time};'
+            sql2 = f"UPDATE parameter_server_state SET last_grad_time='{last_grad_time}';"
             self.__exec(sql2) 
             pass 
         pass 
