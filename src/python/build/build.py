@@ -10,6 +10,7 @@ parser.add_argument('--clean-up', dest='clean_up', action='store_true', help='te
 parser.add_argument('--no-build', dest='no_build', action='store_true', help='no Docker builds, just re-use')
 parser.add_argument('--no-base-build', dest='no_base_build', action='store_true', help='do not build the base Docker image')
 parser.add_argument('--keep-build-pod', dest='keep_build_pod', action='store_true', help='do not delete the build pod') 
+parser.add_argument('--deploy-above-storage', dest='deploy_above_storage', action='store_true', help='deploy phase-3 non-storage') 
 parser.set_defaults(phase2=False, phase3=False, clean_up=False)
 args = parser.parse_args() 
 
@@ -42,11 +43,13 @@ if args.phase_3:
     helm_deploy_simulation_storage()
     helm_deploy_minio() 
     helm_deploy_postgres() 
-    init_storage() ## blocks until complete 
-    helm_deploy_parameter_server() 
-    helm_deploy_simulation() 
-    helm_deploy_gradient_calculation() 
+    init_storage() ## blocks until complete
+    helm_deploy_above_stroage() 
     pass
+
+if args.deploy_above_storage:
+    helm_deploy_above_storage() 
+    pass 
 
 if args.clean_up_compute:
     print(OKGREEN+'tearing-down compute...'+NC) 

@@ -2,6 +2,7 @@ from cassandra.cluster import Cluster
 from cassandra import ConsistencyLevel 
 from cassandra.query import SimpleStatement 
 from connectors.storageABC import __StorageABC 
+from connectors.util import pack_obj, unpack_obj 
 import uuid
 import pickle 
 import base64
@@ -81,18 +82,10 @@ class CassandraConnector(__StorageABC):
         self.__exec(cmd3, debug=True) 
         pass 
     
-    def __unpack_obj(self, b64_str):
-        'b64_str -> obj'
-        return pickle.loads(base64.b64decode(b64_str.encode())) 
-
-    def __pack_obj(self, obj): 
-        'obj -> b64_str'
-        return base64.b64encode(pickle.dumps(obj)).decode()  
-
     def insert_game_transition(self, obj): 
         'upload a single game transition'
         ## get base64 representation 
-        obj_b64_string = self.__pack_obj(obj)  
+        obj_b64_string = pack_obj(obj)  
         ## generate key 
         _uuid = str(uuid.uuid1()) 
         ## upload 
@@ -107,7 +100,7 @@ class CassandraConnector(__StorageABC):
         row_list = self.__exec(cmd) 
         ## unpack single item 
         obj_b64_string = row_list[0].b64data 
-        return self.__unpack_obj(obj_b64_string) 
+        return unpack_obj(obj_b64_string) 
 
     def get_all_game_transition_uuids(self):
         ## download data 
@@ -120,6 +113,7 @@ class CassandraConnector(__StorageABC):
         return self.__get_objs(uuid_list, 'simulations') 
 
     def get_gradients(self, uuid_list): 
+        'DEPRECATED'
         return self.__get_objs(uuid_list, 'gradients') 
 
     def __get_objs(self, uuid_list, table): 
@@ -141,21 +135,23 @@ class CassandraConnector(__StorageABC):
             if len(b64_str_list) > 0: 
                 ## first row, first column 
                 b64_str = b64_str_list[0][0] 
-                obj = self.__unpack_obj(b64_str) 
+                obj = unpack_obj(b64_str) 
                 objs.append(obj) 
                 pass 
         return objs
 
     def insert_gradient(self, _uuid, grad): 
-        grad_b64_str = self.__pack_obj(grad) 
+        'DEPRECATED'
+        grad_b64_str = pack_obj(grad) 
         cmd = f"INSERT INTO cassandra.gradients (id, b64data) VALUES ({_uuid}, '{grad_b64_str}');"
         self.__exec(cmd) 
         pass 
 
-    def get_gradient(self, _uuid): 
+    def get_gradient(self, _uuid):
+        'DEPRECATED'
         cmd = f'SELECT b64data FROM cassandra.gradients WHERE id={_uuid};' 
         row_list = self.__exec(cmd) 
-        grad = self.__unpack_obj(row_list[0].b64data) 
+        grad = unpack_obj(row_list[0].b64data) 
         return grad 
     pass 
 

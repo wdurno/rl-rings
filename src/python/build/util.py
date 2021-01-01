@@ -111,7 +111,7 @@ def copy_to_pod(pod_name='build-1', src=repo_dir, dst='/build'):
     except:
         ## no need to delete that which does not exist 
         pass 
-    ## 
+    ## copy content into pod  
     cmd3 = f'kubectl cp {src} {pod_name}:{dst}' 
     cmd4 = f'kubectl cp ~/rl-hypothesis-2-config.sh {pod_name}:/root/rl-hypothesis-2-config.sh'
     run(cmd3) 
@@ -215,7 +215,7 @@ def init_storage():
     ## generate random id 
     rand_id = random_str()  
     ## populate 
-    job_yaml = job_template.render(docker_server=docker_server, rand_id=rand_id) 
+    job_yaml = job_template.render(docker_server=docker_server, rand_id=rand_id, ai_image_tag=ai_image_tag) 
     ## apply 
     cmd1 = 'kubectl apply -f -'
     stdin = job_yaml.encode() 
@@ -246,4 +246,8 @@ def helm_deploy_gradient_calculation():
     run(cmd) 
     pass
 
-
+def helm_deploy_above_storage():
+    helm_deploy_simulation() 
+    helm_deploy_parameter_server() 
+    helm_deploy_gradient_calculation() 
+    pass 

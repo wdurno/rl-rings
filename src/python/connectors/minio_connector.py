@@ -1,6 +1,7 @@
 import io
 from minio import Minio
-from connectors.storageABC import __StorageABC 
+from connectors.storageABC import __StorageABC
+from connectors.util import pack_obj, unpack_obj
 
 class MinIOConnector(__StorageABC):
     'Connect to MinIO'
@@ -42,6 +43,8 @@ class MinIOConnector(__StorageABC):
         connection = self.__get_connection() 
         connection.make_bucket('models') 
         print('MinIO bucket made: `models`') 
+        connection.make_bucket('gradients') 
+        print('MinIO bucket made: `gradients`') 
         pass
 
     def get(self, path, bucket='models'):
@@ -62,5 +65,12 @@ class MinIOConnector(__StorageABC):
         connection = self.__get_connection() 
         connection.put_object(bucket, path, io.BytesIO(blob), len(blob))
         pass 
+
+    def set_gradient(self, _uuid, grad):
+        self.set(str(_uuid), pack_obj(grad, out_bytes=True), bucket='gradients')
+        pass
+
+    def get_gradient(self, _uuid):
+        return unpack_obj(self.get(str(_uuid), bucket='gradients'), in_bytes=True) 
     pass 
 

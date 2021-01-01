@@ -14,7 +14,6 @@ import torch.optim as optim
 from torch import autograd
 from datetime import datetime, timedelta 
 from connectors import pc, cc, mc 
-from warnings import warn
 
 from deep_net import DQN
 from replay_memory import rpm
@@ -161,7 +160,7 @@ class Agent(object):
             _Q_pred = float((dist_pred * torch.linspace(self.Vmin, self.Vmax, self.atoms).to(device)).sum(1).mean())
         return _loss, _Q_pred
 
-    def apply_grads(grads): 
+    def apply_grads(self, grads): 
         self.optimizer_policy.zero_grad() 
         for p, g in zip(self.policy.parameters(), grads): 
             p.grad.fill_(g) 
@@ -403,18 +402,15 @@ def grad_server(batch_size=100, model_wait_time=30, transition_wait_time=30):
             agent.update_device() 
             ## sample game transitions 
             game_transitions = sample_transitions(batch_size) 
-            if len(game_transitions) < 3: 
-                warn('Sampled transition of length zero! Sleeping '+str(transition_wait_time)+' seconds...') 
-                time.sleep(transition_wait_time)
-            elif len(game_transitions[0]) < 3:
-                warn('Sampled too few transitions! Sleeping '+str(transition_wait_time)+' seconds...')
+            if game_transitions is None: 
+                print('Sampled transition of length zero! Sleeping '+str(transition_wait_time)+' seconds...') 
                 time.sleep(transition_wait_time)
             else: 
                 ## calculate gradeints 
                 grads = agent.get_grads(game_transitions) 
                 ## publish gradients 
                 grad_uuid = pc.get_registered_grad_id() 
-                cc.insert_gradient(grad_uuid, grads) 
+                mc.set_gradient(grad_uuid, grads) 
     pass
 
 def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publish_frequency: int=60): 
@@ -459,7 +455,15 @@ def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publ
             time.sleep(grad_wait_time.seconds) 
         else: 
             grad_uuid_list = grad_uuid_time_df.grad_id.to_list() 
-            grads = cc.get_gradients(grad_uuid_list)  
+            ##grads = cc.get_gradients(grad_uuid_list) # grads too big for cassandra
+            grads = [] 
+            for _uuid in grad_uuid_list: 
+                try:
+                    grads.append(mc.get_gradient(_uuid))
+                except Exception as e: 
+                    print('Could not get grad!') 
+                    print(e) 
+                    pass 
             last_grad_time = grad_uuid_time_df.timestamp.max() 
             pc.update_parameter_server_state(last_grad_time=last_grad_time) 
             if len(grads) == 0:

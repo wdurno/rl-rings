@@ -25,11 +25,16 @@ def upload_metrics():
     pass
 
 def sample_transitions(n=100):
-    'randomly sample transitions, ready for `get_grads`'
+    '''
+    Randomly sample transitions, ready for `get_grads`.
+    Returns list of tensors if successful, otherwise `None`. 
+    '''
     ## pull data from db 
     uuids = pc.sample_transition_ids(n) 
     rows = cc.get_transitions(uuids) 
     ## transform into tuple of columns 
+    if len(rows) == 0:
+        return None 
     out = [] 
     for _ in range(6): 
         out.append([]) 
