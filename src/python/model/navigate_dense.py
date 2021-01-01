@@ -163,7 +163,7 @@ class Agent(object):
     def apply_grads(self, grads): 
         self.optimizer_policy.zero_grad() 
         for p, g in zip(self.policy.parameters(), grads): 
-            p.grad.fill_(g) 
+            p.grad = g 
         self.optimizer_policy.step() 
         pass 
 
@@ -411,6 +411,7 @@ def grad_server(batch_size=100, model_wait_time=30, transition_wait_time=30):
                 ## publish gradients 
                 grad_uuid = pc.get_registered_grad_id() 
                 mc.set_gradient(grad_uuid, grads) 
+                print('Gradient published! ' + str(grad_uuid)) 
     pass
 
 def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publish_frequency: int=60): 
@@ -472,13 +473,14 @@ def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publ
                 time.sleep(grad_wait_time.seconds) 
             else: 
                 ## integrate grads 
-                agent.apply_grads(grads) 
+                for grad in grads:
+                    agent.apply_grads(grad) 
                 current_time = datetime.now() 
                 if current_time - last_publish_time > model_publish_frequency:
                     ## publish model 
                     model_id += 1 
                     path = str(model_name) + '-' + str(model_id) + '-DQN.pkl' 
-                    local_path = os.path.join('/models', ) ## TODO global variable, put in config 
+                    local_path = os.path.join('/models', path) ## TODO global variable, put in config 
                     agent.save_model(local_path) 
                     with open(local_path, 'rb') as f:
                         mc.set(path, f.read()) 

@@ -49,15 +49,17 @@ class MinIOConnector(__StorageABC):
 
     def get(self, path, bucket='models'):
         'read a blob from storage'
-        connection = self.__get_connection() 
+        connection = self.__get_connection()
+        r = None 
         try:
             r = connection.get_object(bucket, path) 
             blob = r.read() 
         except Exception as e:
             raise e 
         finally: 
-            r.close() 
-            r.release_conn()
+            if r is not None: 
+                r.close() 
+                r.release_conn()
         return blob 
 
     def set(self, path, blob: bytes, bucket='models'): 
