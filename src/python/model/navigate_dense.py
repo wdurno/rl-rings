@@ -475,6 +475,7 @@ def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publ
                 ## integrate grads 
                 for grad in grads:
                     agent.apply_grads(grad) 
+                print('integrated '+str(len(grads))+' gradients') 
                 current_time = datetime.now() 
                 if current_time - last_publish_time > model_publish_frequency:
                     ## publish model 
