@@ -44,7 +44,7 @@ if args.phase_3:
     helm_deploy_minio() 
     helm_deploy_postgres() 
     init_storage() ## blocks until complete
-    helm_deploy_above_stroage() 
+    helm_deploy_above_storage() 
     pass
 
 if args.deploy_above_storage:

@@ -332,7 +332,8 @@ def train(n_episodes):
             path = get_latest_model() 
             if path is not None: 
                 ## latest model obtained
-                agent1.load_model(path)  
+                agent1.load_model(path) 
+                print('loaded mode: '+str(path)+'...') 
         ## continue loop? 
         i_episode += 1 
         if n_episodes is not None: 

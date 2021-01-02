@@ -2,5 +2,5 @@
 name: "gradient-calculation"
 docker_server: ""
 ai_image_tag: "" 
-replicas: 2 
+replicas: 6 
 
