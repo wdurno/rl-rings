@@ -1,3 +1,7 @@
+#### v0.1.0 
+
+Build automation stable. Optimization iterations functioning. 
+
 #### v0.0.2
 
 Bookmarking old, GCP-optimized code.
