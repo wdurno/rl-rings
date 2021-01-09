@@ -21,7 +21,8 @@ from util import get_latest_model, upload_transition, upload_metrics, sample_tra
 
 ## cluster role 
 from cluster_config import ROLE, SIMULATION_ROLE, GRADIENT_CALCULATION_ROLE, \
-        PARAMETER_SERVER_ROLE, SINGLE_NODE_ROLE 
+        PARAMETER_SERVER_ROLE, SINGLE_NODE_ROLE, GRADIENT_SHARD_NUMBER, \
+        TOTAL_GRADIENT_SHARDS
 
 ## constants 
 instance_id = uuid.uuid1().int >> 16 
@@ -38,9 +39,6 @@ def time_limit(time_out):
         return False
 
 class Agent(object):
-    ## TODO replace self.memory with service client if ROLE != SINGLE_NODE_ROLE 
-    ## TODO load latest model per iteration if ROLE in {SIMULATION_ROLE, GRADIENT_CALCULATION_ROLE} 
-    ## TODO learning should only occur if ROLE in {SINGLE_NODE_ROLE, PARAMETER_SERVER_ROLE} 
     
     def __init__(self, **kwargs):
         self.lr = 3e-4

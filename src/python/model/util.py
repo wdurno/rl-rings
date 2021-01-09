@@ -2,6 +2,8 @@ from connectors import mc, cc, pc
 from time import sleep 
 import torch 
 import os 
+import numpy 
+import base64 
 
 ## constants 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
@@ -71,5 +73,38 @@ def get_latest_model(models_dir='/models'):
         f.write(model_blob) 
     return local_path 
 
+def __split_tensor(tensor, n):
+    'split a 1-dim tensor into n parts'
+    k, m = divmod(tensor.shape[0], n) 
+    return (tensor[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n)) 
 
+def shard_gradients(grads, n_shards: int): 
+    'flatten grads and break into `n_shards`'
+    ## concat 
+    flat_grads = [] 
+    for g in grads:
+        g = g.reshape((-1,)) 
+        flat_grads.append(g) 
+        pass
+    flat_grads = torch.concat(flat_grads) 
+    ## shard 
+    shards = __split_tensor(flat_grads, n_shards) 
+    return shards 
+
+def pack_shard(shard_tensor): 
+    'tensor -> b64string'
+    np_array_bytes = shard_tensor.detach().numpy().bytes() 
+    b64string = base64.b64encode(np_array_bytes).encode()  
+    return b64string 
+
+def unpack_shard_b64string(shard_b64string): 
+    'b64string -> tensor'
+    np_array_bytes = base64.b64decode(shard_b64string.decode()) 
+    shard_tensor = torch.from_numpy(np.frombuffer(np_array_bytes)) 
+    return shard_tensor 
+
+def recombine_flat_tensors_into_parameters(flat_tensor, parameters): 
+    'read through `flat_tensor` assigning values to each parameter'
+    ## TODO is this needed?  
+    pass 
 
