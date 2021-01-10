@@ -152,6 +152,8 @@ def recombine_tensors_shards_into_parameters(tensor_shards, parameters):
         flat_parameter_tensor = flat_tensor[cursor:(cursor + parameter_size)] 
         parameter_tensor = flat_parameter_tensor.reshape(parameter_shape) 
         p.copy_(parameter_tensor) 
+        ## increment cursor 
+        cursor += parameter_size 
         pass 
     return parameters 
 
