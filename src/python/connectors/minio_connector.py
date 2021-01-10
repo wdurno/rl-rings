@@ -69,10 +69,12 @@ class MinIOConnector(__StorageABC):
         pass 
 
     def set_gradient(self, _uuid, grad):
+        'DEPRECATED!'
         self.set(str(_uuid), pack_obj(grad, out_bytes=True), bucket='gradients')
         pass
 
     def get_gradient(self, _uuid):
+        'DEPRECATED!'
         return unpack_obj(self.get(str(_uuid), bucket='gradients'), in_bytes=True) 
     pass 
 

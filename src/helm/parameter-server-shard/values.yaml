@@ -1,0 +1,6 @@
+
+name: "parameter-server-shard-0"
+shard_index: "0" 
+docker_server: ""
+ai_image_tag: "" 
+

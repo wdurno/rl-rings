@@ -23,6 +23,10 @@ if repo_dir is None:
 ai_image_tag = os.environ.get('rl_hypothesis_2_ai_image_tag')
 if ai_image_tag is None: 
     raise ValueError(FAIL+'Please set `rl_hypothesis_2_ai_image_tag` environment variable!'+NC)
+n_shards = os.environ.get('rl_hypothesis_2_n_parameter_server_shards') 
+if n_shards is None: 
+    raise ValueError(FAIL+'Please set `rl_hypothesis_2_n_parameter_server_shards` environment variable!'+NC) 
+n_shards = int(n_shards) 
 
 def run(cmd: str, stdin: str=None, os_system: bool=False):
     'Execute a string as a blocking, exception-raising system call'
@@ -232,11 +236,19 @@ def helm_deploy_simulation():
     run(cmd) 
     pass 
 
-def helm_deploy_parameter_server(): 
+def helm_deploy_parameter_server_shard(shard_index:int): 
+    shard_index = str(shard_index)
     cmd = f'helm upgrade parameter-server {repo_dir}/src/helm/parameter-server --install '+\
+            f'--set name="parameter-server-shard-{shard_index}" '+\
+            f'--set shard_index="{shard_index}" '+\
             f'--set docker_server=$(cat {repo_dir}/secret/acr/server) '+\
             f'--set ai_image_tag="{ai_image_tag}"'
     run(cmd) 
+    pass 
+
+def helm_deploy_parameter_server_shards(): 
+    for idx in range(n_shards): 
+        helm_deploy_parameter_server_shard(idx) 
     pass 
 
 def helm_deploy_gradient_calculation(): 

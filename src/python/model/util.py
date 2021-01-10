@@ -4,6 +4,7 @@ import torch
 import os 
 import numpy 
 import base64 
+import grequests 
 
 ## constants 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
@@ -91,6 +92,25 @@ def shard_gradients(grads, n_shards: int):
     shards = __split_tensor(flat_grads, n_shards) 
     return shards 
 
+def publish_grad_shards(shards): 
+    'write to parameter shard servers'
+    n_shards = len(shards) 
+    async_requests = [] 
+    for i in range(n_shards): 
+        b64string = pack_shard(shards[i]) 
+        r = requests.post('http://parameter-shard-server-'+str(i), data=b64string.encode()) 
+        async_requests.append(r) 
+        pass 
+    responses = grequests.map(async_requests)
+    failed_responses = [r for r in responses if r.status_code != 200] 
+    for failed_response in failed_responses: 
+        print('shard publish failed!') 
+        print(failed_response.status_code) 
+        print(failed_response.text) 
+        pass
+    ## return number of successfully published gradients 
+    return len(responses) - len(failed_responses) 
+
 def pack_shard(shard_tensor): 
     'tensor -> b64string'
     np_array_bytes = shard_tensor.detach().numpy().bytes() 
@@ -103,8 +123,35 @@ def unpack_shard_b64string(shard_b64string):
     shard_tensor = torch.from_numpy(np.frombuffer(np_array_bytes)) 
     return shard_tensor 
 
-def recombine_flat_tensors_into_parameters(flat_tensor, parameters): 
-    'read through `flat_tensor` assigning values to each parameter'
-    ## TODO is this needed?  
-    pass 
+def get_all_latest_parameter_shards(): 
+    shard_uuids = pc.get_all_latest_parameter_server_shard_uuids() 
+    b64_idx_pairs = cc.get_parameter_shards(shard_uuids) 
+    b64_idx_pairs.sort(key = lambda x: x[1]) 
+    shard_b64strings = [x[0] for x in b64_idx_pairs] 
+    shards = [unpack_shard_b64string(b64str) for b64str in shard_b64strings] 
+    return shards 
+
+def recombine_tensors_shards_into_parameters(tensor_shards, parameters): 
+    '''
+    Read through `flat_tensor` assigning values to each parameter.
+    Assignment is in-place! 
+    '''
+    if len(tensor_shards) != len(parameters): 
+        print('Error: `len(tensor_shards) != len(parameters)`!') 
+        return None 
+    ## tensor shards arrive in approximately equally-sized arrays 
+    flat_tensor = torch.cat(tensor_shards) 
+    ## extract 
+    cursor = 0 
+    for p in parameters: 
+        ## get total floats in tensor 
+        parameter_size = p.detach().reshape((-1,)).shape[0] 
+        ## get tensor shape 
+        parameter_shape = p.shape() 
+        ## extract parameter-sized tensor and allocate it into parameter 
+        flat_parameter_tensor = flat_tensor[cursor:(cursor + parameter_size)] 
+        parameter_tensor = flat_parameter_tensor.reshape(parameter_shape) 
+        p.copy_(parameter_tensor) 
+        pass 
+    return parameters 
 

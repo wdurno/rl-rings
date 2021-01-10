@@ -6,3 +6,4 @@ matplotlib
 gym
 minerl
 tensorboard
+grequests 

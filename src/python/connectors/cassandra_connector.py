@@ -124,7 +124,7 @@ class CassandraConnector(__StorageABC):
         return self.__get_objs(uuid_list, 'gradients')
     
     def get_parameter_shards(self, uuid_list): 
-        return self.__get_ibjs(uuid_lits, 'parameter_shards')
+        return self.__get_objs(uuid_list, 'parameter_shards')
 
     def __get_objs(self, uuid_list, table): 
         ## start async requests 

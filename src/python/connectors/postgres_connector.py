@@ -202,6 +202,19 @@ class PostgresConnector(__StorageABC):
             return str(rows[0][0]) 
         return None 
 
+    def get_all_latest_parameter_server_shard_uuids(self): 
+        sql = '''
+        SELECT shard_id, shard_index FROM 
+        (
+            SELECT shard_id, MAX(timestamp) 
+            FROM parameter_server_shards 
+            GROUP BY shard_index 
+        )x
+        ORDER BY shard_index; 
+        '''
+        row_list = self.__exec(sql) 
+        return [(str(row[0]), int(row[1])) for row in row_list]
+
     #### PARAMETER SERVER SHARD LOCAL DB 
 
     def init_grad_shard_storage(self): 

@@ -15,6 +15,7 @@ BUILD_DIR=${repo_dir}/build/base-image
 echo -e ${GREEN}copying code into build dir...${NC} 
 cp ${repo_dir}/src/python/model/requirements.txt ${BUILD_DIR}/python-requirements/model-requirements.txt 
 cp ${repo_dir}/src/python/connectors/requirements.txt ${BUILD_DIR}/python-requirements/connector-requirements.txt 
+cp ${repo_dir}/src/python/parameter_server_shard/requirements.txt ${BUILD_DIR}/python-requirements/parameter-server-requirements.txt 
 
 echo -e ${GREEN}running docker build...${NC} 
 DOCKER_SERVER=$(cat ${repo_dir}/secret/acr/server)

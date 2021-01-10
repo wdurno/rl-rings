@@ -17,7 +17,8 @@ from connectors import pc, cc, mc
 
 from deep_net import DQN
 from replay_memory import rpm
-from util import get_latest_model, upload_transition, upload_metrics, sample_transitions  
+from util import get_latest_model, upload_transition, upload_metrics, sample_transitions, \
+        shard_gradients, publish_grad_shards 
 
 ## cluster role 
 from cluster_config import ROLE, SIMULATION_ROLE, GRADIENT_CALCULATION_ROLE, \
@@ -408,12 +409,14 @@ def grad_server(batch_size=100, model_wait_time=30, transition_wait_time=30):
                 ## calculate gradeints 
                 grads = agent.get_grads(game_transitions) 
                 ## publish gradients 
-                grad_uuid = pc.get_registered_grad_id() 
-                mc.set_gradient(grad_uuid, grads) 
-                print('Gradient published! ' + str(grad_uuid)) 
+                grad_shards = shard_gradients(grads, TOTAL_GRADIENT_SHARDS) 
+                successful_writes = publish_grad_shards(grad_shards) 
+                print('successfully wrote '+str(successful_writes)+' of '+str(TOTAL_GRADIENT_SHARDS)+\
+                        ' shards') 
     pass
 
 def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publish_frequency: int=60): 
+    ## TODO change to parameter_shard_combiner, parameter server is now sharded  
     '''
     integrate gradients, publish models
     inputs:
