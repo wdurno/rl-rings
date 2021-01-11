@@ -1,0 +1,6 @@
+
+name: "parameter-shard-combiner"
+docker_server: ""
+ai_image_tag: "" 
+replicas: 1
+

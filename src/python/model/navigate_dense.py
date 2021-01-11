@@ -18,11 +18,12 @@ from connectors import pc, cc, mc
 from deep_net import DQN
 from replay_memory import rpm
 from util import get_latest_model, upload_transition, upload_metrics, sample_transitions, \
-        shard_gradients, publish_grad_shards 
+        shard_gradients, publish_grad_shards, get_all_latest_parameter_shards, \
+        recombine_tensors_shards_into_parameters 
 
 ## cluster role 
 from cluster_config import ROLE, SIMULATION_ROLE, GRADIENT_CALCULATION_ROLE, \
-        PARAMETER_SERVER_ROLE, SINGLE_NODE_ROLE, GRADIENT_SHARD_NUMBER, \
+        PARAMETER_SHARD_COMBINER_ROLE, SINGLE_NODE_ROLE, GRADIENT_SHARD_NUMBER, \
         TOTAL_GRADIENT_SHARDS
 
 ## constants 
@@ -416,8 +417,10 @@ def grad_server(batch_size=100, model_wait_time=30, transition_wait_time=30):
     pass
 
 def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publish_frequency: int=60): 
-    ## TODO change to parameter_shard_combiner, parameter server is now sharded  
     '''
+    DEPRICATED!
+    use `parameter_server_shard` instead
+    ---
     integrate gradients, publish models
     inputs:
       - `model`: model prefix for writing to MinIO 
@@ -494,6 +497,55 @@ def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publ
                     pc.update_parameter_server_state(last_model_publish_time=last_publish_time) 
                     print('model written: '+str(path)) 
                     pass 
+    pass
+
+def parameter_shard_combiner(publish_attempt_wait_time=90): 
+    '''
+    regularly combines parameter shards and publishes to minio
+    '''
+    ## init
+    agent = Agent() 
+    agent.update_device() 
+    ## get state 
+    last_publish_time, last_grad_time = pc.get_parameter_server_state() 
+    ## check for latest model
+    model_id, model_minio_path = pc.get_latest_model_path()
+    ## cast constants 
+    model_publish_frequency = timedelta(seconds=model_publish_frequency)  
+    ## if idx == 0, publish a random model 
+    if model_id == 0 or model_minio_path == '': 
+        ## no model found, publishing first 
+        print('No model found, writing first...') 
+        model_id += 1 
+        path = str(model_name) + '-' + str(model_id) + '-DQN.pkl' 
+        local_path = os.path.join('/models', path) ## TODO code duplication, refactor needed, move to minio  
+        agent.save_model(local_path) 
+        with open(local_path, 'rb') as f:
+            mc.set(path, f.read()) 
+            pass
+        pc.set_model_path(path) 
+        pass
+    ## forever publish new models 
+    while True: 
+        ## attempt to get grads 
+        shards = get_all_latest_parameter_shards() 
+        parameters = agent.policy.parameters() 
+        parameters = recombine_tensors_shards_into_parameters(shards, parameters) 
+        now = datetime.now() 
+        if parameters is not None and last_publish_time - now > model_publish_frequency: 
+            ## time to publish a model 
+            model_id += 1 
+            path = str(model_name) + '-' + str(model_id) + '-DQN.pkl' 
+            local_path = os.path.join('/models', path) ## TODO global variable, put in config 
+            agent.save_model(local_path) 
+            with open(local_path, 'rb') as f:
+                mc.set(path, f.read()) 
+                pass 
+            pc.set_model_path(path) 
+            ## update time 
+            last_publish_time = now  
+            pc.update_parameter_server_state(last_model_publish_time=last_publish_time) 
+            print('model written: '+str(path))
     pass 
 
 if __name__ == '__main__':
@@ -503,5 +555,7 @@ if __name__ == '__main__':
         train(None) 
     if ROLE == GRADIENT_CALCULATION_ROLE:
         grad_server() 
-    if ROLE == PARAMETER_SERVER_ROLE:
+    if ROLE == PARAMETER_SHARD_COMBINER_ROLE:
+        parameter_shard_combiner() 
+    if ROLE == PARAMETER_SERVER_ROLE: 
         parameter_server() 

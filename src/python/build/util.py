@@ -238,7 +238,7 @@ def helm_deploy_simulation():
 
 def helm_deploy_parameter_server_shard(shard_index:int): 
     shard_index = str(shard_index)
-    cmd = f'helm upgrade parameter-server {repo_dir}/src/helm/parameter-server --install '+\
+    cmd = f'helm upgrade parameter-server-shard-{shard_index} {repo_dir}/src/helm/parameter-server --install '+\
             f'--set name="parameter-server-shard-{shard_index}" '+\
             f'--set shard_index="{shard_index}" '+\
             f'--set docker_server=$(cat {repo_dir}/secret/acr/server) '+\
@@ -258,8 +258,16 @@ def helm_deploy_gradient_calculation():
     run(cmd) 
     pass
 
+def helm_deploy_parameter_shard_combiner():
+    cmd = f'helm upgrade parameter-shard-combiner {repo_dir}/src/helm/parameter-shard-combiner --install '+\
+            f'--set docker_server=$(cat {repo_dir}/secret/acr/server)'+\
+            f'--set ai_image_tag="{ai_image_tag}"'
+    run(cmd) 
+    pass
+
 def helm_deploy_above_storage():
     helm_deploy_simulation() 
-    helm_deploy_parameter_server() 
+    helm_deploy_parameter_server_shards() 
+    helm_deploy_parameter_shard_combiner() 
     helm_deploy_gradient_calculation() 
     pass 
