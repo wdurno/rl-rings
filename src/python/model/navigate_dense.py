@@ -511,7 +511,7 @@ def parameter_shard_combiner(publish_attempt_wait_time=90):
     ## check for latest model
     model_id, model_minio_path = pc.get_latest_model_path()
     ## cast constants 
-    model_publish_frequency = timedelta(seconds=model_publish_frequency)  
+    model_publish_frequency = timedelta(seconds=publish_attempt_wait_time)  
     ## if idx == 0, publish a random model 
     if model_id == 0 or model_minio_path == '': 
         ## no model found, publishing first 

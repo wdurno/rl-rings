@@ -5,6 +5,7 @@ from datetime import datetime
 import torch 
 import argparse 
 import uuid 
+import os 
 
 parser = argparse.ArgumentParser(description='integrate gradient shards into parameter shards') 
 parser.add_argument('--shard-index', required=True, type=int) 

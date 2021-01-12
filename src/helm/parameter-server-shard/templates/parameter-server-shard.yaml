@@ -2,8 +2,6 @@ kind: Service
 apiVersion: v1
 metadata:
   name: {{ .Values.name }} 
-  label:
-    svc-grp: parameter-server-shards
 spec:
   selector:
     app: {{ .Values.name }} 
@@ -54,8 +52,7 @@ spec:
           command: 
             - "python3"
             - "-u"
-            - "python/parameter_server_shard/listener.py" 
-            - "--shard-index={{ .Values.shard_index }}"
+            - "src/python/parameter_server_shard/listener.py" 
           imagePullPolicy: Always
           resources:
             requests:
@@ -84,7 +81,8 @@ spec:
           command:
             - "python3"
             - "-u"
-            - "python/parameter_server_shard/integrator.py"
+            - "src/python/parameter_server_shard/integrator.py"
+            - "--shard-index={{ .Values.shard_index }}"
           imagePullPolicy: Always
           resources:
             requests:
@@ -101,7 +99,7 @@ spec:
                   name: postgres
                   key: postgres-secret
           volumeMounts:
-            - name: pgdata
+            - name: pg-data
               mountPath: /var/lib/postgresql/data
               subPath: postgres
           resources:
@@ -109,7 +107,7 @@ spec:
               memory: "500Mi" 
               cpu: "500m"
       volumes:
-        - name: pd-data 
+        - name: pg-data 
           emptyDir: {} 
       imagePullSecrets:
         - name: acr-creds

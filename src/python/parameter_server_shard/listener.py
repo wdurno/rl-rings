@@ -10,7 +10,7 @@ parser = argparse.ArgumentParser(description='listen for gradient shards')
 parser.add_argument('--db-url', required=False, default='0.0.0.0', type=str) 
 parser.add_argument('--db-password', required=False, default=None) 
 
-app = Flast(__name__) 
+app = Flask(__name__) 
 
 @app.route('/', methods=['POST']) 
 def add_grad():
