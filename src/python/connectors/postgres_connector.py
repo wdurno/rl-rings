@@ -221,6 +221,7 @@ class PostgresConnector(__StorageABC):
         sql1 = 'CREATE DATABASE structured;' 
         sql2 = 'CREATE TABLE timestamped_b64_store(b64string TEXT, timestamp TIMESTAMP);'
         self.connection = psycopg2.connect(user='postgres', host=self.url, port='5432', password=self.secret) 
+        self.connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
         self.__exec(sql1) 
         self.close_connection()  
         self.__exec(sql2) 

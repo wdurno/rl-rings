@@ -499,7 +499,7 @@ def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publ
                     pass 
     pass
 
-def parameter_shard_combiner(publish_attempt_wait_time=90): 
+def parameter_shard_combiner(publish_attempt_wait_time=90, model_name:str='model'): 
     '''
     regularly combines parameter shards and publishes to minio
     '''
