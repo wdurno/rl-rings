@@ -73,7 +73,7 @@ class PostgresConnector(__StorageABC):
         sql5 = 'CREATE TABLE latest_model(model_id INT4 PRIMARY KEY, path TEXT);'
         sql6 = "INSERT INTO latest_model VALUES (0, '');" 
         sql7 = 'CREATE TABLE parameter_server_state(last_model_publish_time TIMESTAMP, last_grad_time TIMESTAMP);'
-        sql8 = 'CREATE TABLE parameter_sherver_shards(shard_id UUID PRIMARY KEY, shard_index INT4, timestamp TIMESTAMP);'
+        sql8 = 'CREATE TABLE parameter_server_shards(shard_id UUID PRIMARY KEY, shard_index INT4, timestamp TIMESTAMP);'
         ## init DB requires special connection 
         self.connection = psycopg2.connect(user='postgres', host=self.url, port='5432', password=self.secret)
         self.connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
@@ -188,11 +188,11 @@ class PostgresConnector(__StorageABC):
     def get_latest_parameter_server_shard_uuid(self, shard_index): 
         'returns a uuid str or None'
         sql = f'''
-        SELECT shard_id WHERE timestamp=max_timestamp FROM parameter_server_shards IN
+        SELECT shard_id WHERE timestamp=max_timestamp FROM 
         ( 
             SELECT shard_id, timestamp, MAX(timestamp) AS max_timestamp
             FROM parameter_server_shards
-            WHERE shard_id={shard_index} 
+            WHERE shard_index={shard_index} 
         )x;
         '''
         rows = self.__exec(sql) 
