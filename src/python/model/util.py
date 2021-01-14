@@ -79,18 +79,27 @@ def __split_tensor(tensor, n):
     k, m = divmod(tensor.shape[0], n) 
     return (tensor[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n)) 
 
+def shard_tensor_list(tensor_list, n_shards: int): 
+    'flatten tensors and break into `n_shards`'
+    ## concat 
+    flat_tensors = [] 
+    for t in tensor_list: 
+        t = t.reshape((-1,)) 
+        flat_tensors.append(t) 
+        pass 
+    flat_tensor = torch.cat(flat_tensors) 
+    ## shard 
+    shards = __split_tensor(flat_tensor, n_shards) 
+    return shards
+
+def shard_model_parameters(parameters, n_shards: int): 
+    'flatten parameter tensors and break into `n_shards`' 
+    tensor_list = [p.detach() for p in parameters] 
+    return shard_tensor_list(tensor_list, n_shards) 
+
 def shard_gradients(grads, n_shards: int): 
     'flatten grads and break into `n_shards`'
-    ## concat 
-    flat_grads = [] 
-    for g in grads:
-        g = g.reshape((-1,)) 
-        flat_grads.append(g) 
-        pass
-    flat_grads = torch.concat(flat_grads) 
-    ## shard 
-    shards = __split_tensor(flat_grads, n_shards) 
-    return shards 
+    return shard_tensor_list(grads, n_shards) 
 
 def publish_grad_shards(shards): 
     'write to parameter shard servers'
@@ -113,13 +122,13 @@ def publish_grad_shards(shards):
 
 def pack_shard(shard_tensor): 
     'tensor -> b64string'
-    np_array_bytes = shard_tensor.detach().numpy().bytes() 
-    b64string = base64.b64encode(np_array_bytes).encode()  
+    np_array_bytes = shard_tensor.detach().numpy().tobytes() 
+    b64string = base64.b64encode(np_array_bytes).decode()  
     return b64string 
 
 def unpack_shard_b64string(shard_b64string): 
     'b64string -> tensor'
-    np_array_bytes = base64.b64decode(shard_b64string.decode()) 
+    np_array_bytes = base64.b64decode(shard_b64string.encode()) 
     shard_tensor = torch.from_numpy(np.frombuffer(np_array_bytes)) 
     return shard_tensor 
 

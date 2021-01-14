@@ -78,7 +78,7 @@ if __name__ == '__main__':
                 _uuid = uuid.uuid1() 
                 ## serialize 
                 shard = param_dict['shard'].detach() 
-                shard_b64string = pack_shard() 
+                shard_b64string = pack_shard(shard) 
                 ## write to cassandra 
                 cc.insert_parameter_shard_b64(_uuid, shard_b64string) 
                 ## register uuid with postgres  

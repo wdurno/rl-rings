@@ -180,20 +180,20 @@ class PostgresConnector(__StorageABC):
 
     def register_parameter_server_shard(self, _uuid, shard_index): 
         'after writing shard to cassandra, register uuid here' 
-        timestemp = datetime.now() 
-        sql = f"INSERT INTO parameter_server_shards VALUES ('{_uuid}', {shard_index}, 'timestamp');" 
+        timestamp = datetime.now() 
+        sql = f"INSERT INTO parameter_server_shards VALUES ('{_uuid}', {shard_index}, '{timestamp}');" 
         self.__exec(sql)  
         pass 
 
     def get_latest_parameter_server_shard_uuid(self, shard_index): 
         'returns a uuid str or None'
         sql = f'''
-        SELECT shard_id WHERE timestamp=max_timestamp FROM 
-        ( 
-            SELECT shard_id, timestamp, MAX(timestamp) AS max_timestamp
-            FROM parameter_server_shards
-            WHERE shard_index={shard_index} 
-        )x;
+        SELECT shard_id FROM parameter_server_shards WHERE (shard_index, timestamp) IN
+        (
+            SELECT shard_index, MAX(timestamp) 
+            FROM parameter_server_shards 
+            GROUP BY shard_index
+        );
         '''
         rows = self.__exec(sql) 
         if len(rows) > 1: 
@@ -204,12 +204,12 @@ class PostgresConnector(__StorageABC):
 
     def get_all_latest_parameter_server_shard_uuids(self): 
         sql = '''
-        SELECT shard_id, shard_index FROM 
+        SELECT shard_id, shard_index FROM parameter_server_shards WHERE (shard_index, timestamp) IN  
         (
-            SELECT shard_id, MAX(timestamp) 
+            SELECT shard_index, MAX(timestamp) 
             FROM parameter_server_shards 
             GROUP BY shard_index 
-        )x
+        )
         ORDER BY shard_index; 
         '''
         row_list = self.__exec(sql) 

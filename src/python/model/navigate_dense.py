@@ -19,7 +19,7 @@ from deep_net import DQN
 from replay_memory import rpm
 from util import get_latest_model, upload_transition, upload_metrics, sample_transitions, \
         shard_gradients, publish_grad_shards, get_all_latest_parameter_shards, \
-        recombine_tensors_shards_into_parameters 
+        recombine_tensors_shards_into_parameters, shard_model_parameters, pack_shard  
 
 ## cluster role 
 from cluster_config import ROLE, SIMULATION_ROLE, GRADIENT_CALCULATION_ROLE, \
@@ -514,7 +514,17 @@ def parameter_shard_combiner(publish_attempt_wait_time=90, model_name:str='model
     model_publish_frequency = timedelta(seconds=publish_attempt_wait_time)  
     ## if idx == 0, publish a random model 
     if model_id == 0 or model_minio_path == '': 
-        ## no model found, publishing first 
+        ## no model found 
+        ## publish first parameter shards
+        parameter_shards = shard_model_parameters(agent.policy.parameters(), TOTAL_GRADIENT_SHARDS)
+        ## write each to cassandra, then publish to postgres
+        for idx, parameter_shard in enumerate(parameter_shards):
+            _uuid = uuid.uuid1()
+            shard_b64_string = pack_shard(parameter_shard)
+            cc.insert_parameter_shard_b64(_uuid, shard_b64_string)
+            pc.register_parameter_server_shard(_uuid, idx)
+            pass 
+        ## publishing first to MinIO  
         print('No model found, writing first...') 
         model_id += 1 
         path = str(model_name) + '-' + str(model_id) + '-DQN.pkl' 
@@ -523,6 +533,7 @@ def parameter_shard_combiner(publish_attempt_wait_time=90, model_name:str='model
         with open(local_path, 'rb') as f:
             mc.set(path, f.read()) 
             pass
+        ## increment `model_id` and set `model_minio_path` globally  
         pc.set_model_path(path) 
         pass
     ## forever publish new models 
