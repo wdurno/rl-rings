@@ -2,7 +2,7 @@ from connectors import mc, cc, pc
 from time import sleep 
 import torch 
 import os 
-import numpy 
+import numpy as np 
 import base64 
 import grequests 
 
@@ -129,7 +129,7 @@ def pack_shard(shard_tensor):
 def unpack_shard_b64string(shard_b64string): 
     'b64string -> tensor'
     np_array_bytes = base64.b64decode(shard_b64string.encode()) 
-    shard_tensor = torch.from_numpy(np.frombuffer(np_array_bytes)) 
+    shard_tensor = torch.from_numpy(np.frombuffer(np_array_bytes), dtype=np.float32) 
     return shard_tensor 
 
 def get_all_latest_parameter_shards(): 

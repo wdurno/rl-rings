@@ -535,6 +535,7 @@ def parameter_shard_combiner(publish_attempt_wait_time=90, model_name:str='model
             pass
         ## increment `model_id` and set `model_minio_path` globally  
         pc.set_model_path(path) 
+        print('initial model registered: '+str(path)) 
         pass
     ## forever publish new models 
     while True: 
@@ -556,7 +557,11 @@ def parameter_shard_combiner(publish_attempt_wait_time=90, model_name:str='model
             ## update time 
             last_publish_time = now  
             pc.update_parameter_server_state(last_model_publish_time=last_publish_time) 
-            print('model written: '+str(path))
+            print('model written: '+str(path)) 
+        else: 
+            print('Waiting '+str(publish_attempt_wait_time)+' seconds before attempting to gather more shards...') 
+            sleep(publish_attempt_wait_time) 
+            pass 
     pass 
 
 if __name__ == '__main__':

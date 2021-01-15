@@ -188,12 +188,20 @@ class PostgresConnector(__StorageABC):
     def get_latest_parameter_server_shard_uuid(self, shard_index): 
         'returns a uuid str or None'
         sql = f'''
-        SELECT shard_id FROM parameter_server_shards WHERE (shard_index, timestamp) IN
+        SELECT shard_id 
+        FROM 
         (
-            SELECT shard_index, MAX(timestamp) 
+            SELECT shard_id, shard_index, timestamp 
+            FROM parameter_server_shards 
+            WHERE shard_index={shard_index} 
+        )x 
+        INNER JOIN
+        (
+            SELECT shard_index, MAX(timestamp) AS timestamp 
             FROM parameter_server_shards 
             GROUP BY shard_index
-        );
+        )y
+        ON x.shard_index = y.shard_index AND x.timestamp = y.timestamp;
         '''
         rows = self.__exec(sql) 
         if len(rows) > 1: 
@@ -204,13 +212,15 @@ class PostgresConnector(__StorageABC):
 
     def get_all_latest_parameter_server_shard_uuids(self): 
         sql = '''
-        SELECT shard_id, shard_index FROM parameter_server_shards WHERE (shard_index, timestamp) IN  
+        SELECT shard_id 
+        FROM parameter_server_shards AS y 
+        INNER JOIN 
         (
-            SELECT shard_index, MAX(timestamp) 
+            SELECT shard_index, MAX(timestamp) AS timestamp 
             FROM parameter_server_shards 
-            GROUP BY shard_index 
-        )
-        ORDER BY shard_index; 
+            GROUP BY shard_index
+        )x 
+        ON x.shard_index = y.shard_index AND x.timestamp = y.timestamp; 
         '''
         row_list = self.__exec(sql) 
         return [(str(row[0]), int(row[1])) for row in row_list]

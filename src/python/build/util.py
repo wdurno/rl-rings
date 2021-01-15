@@ -261,7 +261,8 @@ def helm_deploy_gradient_calculation():
 def helm_deploy_parameter_shard_combiner():
     cmd = f'helm upgrade parameter-shard-combiner {repo_dir}/src/helm/parameter-shard-combiner --install '+\
             f'--set docker_server=$(cat {repo_dir}/secret/acr/server) '+\
-            f'--set ai_image_tag="{ai_image_tag}"'
+            f'--set ai_image_tag="{ai_image_tag}" '+\
+            f'--set total_gradient_shards="{n_shards}"'
     run(cmd) 
     pass
 

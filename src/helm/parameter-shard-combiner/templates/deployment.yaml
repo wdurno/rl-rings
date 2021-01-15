@@ -22,6 +22,8 @@ spec:
           env:
             - name: DISTRIBUTED_ROLE 
               value: PARAMETER_SHARD_COMBINER
+            - name: TOTAL_GRADIENT_SHARDS
+              value: "{{ .Values.total_gradient_shards }}" 
             - name: MINIO_ACCESSKEY
               valueFrom:
                 secretKeyRef:
