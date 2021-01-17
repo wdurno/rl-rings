@@ -1,5 +1,7 @@
 from connectors import mc, cc, pc
-from time import sleep 
+from time import sleep
+import requests 
+import types 
 import torch 
 import os 
 import numpy as np 
@@ -8,6 +10,8 @@ import grequests
 
 ## constants 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+
+from cluster_config import TOTAL_GRADIENT_SHARDS 
 
 def upload_transition(transition, retry_delay=60):
     continue_attempting = True 
@@ -101,21 +105,29 @@ def shard_gradients(grads, n_shards: int):
     'flatten grads and break into `n_shards`'
     return shard_tensor_list(grads, n_shards) 
 
-def publish_grad_shards(shards): 
+def publish_grad_shards(shards: list): 
     'write to parameter shard servers'
+    if isinstance(shards, types.GeneratorType): 
+        shards = [shard for shard in shards]  
     n_shards = len(shards) 
     async_requests = [] 
     for i in range(n_shards): 
         b64string = pack_shard(shards[i]) 
-        r = requests.post('http://parameter-shard-server-'+str(i), data=b64string.encode()) 
+        r = grequests.post('http://parameter-shard-server-'+str(i)+'/', data=b64string.encode()) 
         async_requests.append(r) 
         pass 
-    responses = grequests.map(async_requests)
-    failed_responses = [r for r in responses if r.status_code != 200] 
+    responses = grequests.map(async_requests) 
+    failed_responses = []
+    for r in responses: 
+        if r is None: 
+            failed_responses.append(r) 
+        elif r.status_code != 200:
+            failed_responses.append(r) 
     for failed_response in failed_responses: 
         print('shard publish failed!') 
-        print(failed_response.status_code) 
-        print(failed_response.text) 
+        print(failed_response)
+        if failed_response is not None: 
+            print(failed_response.text) 
         pass
     ## return number of successfully published gradients 
     return len(responses) - len(failed_responses) 
@@ -129,24 +141,24 @@ def pack_shard(shard_tensor):
 def unpack_shard_b64string(shard_b64string): 
     'b64string -> tensor'
     np_array_bytes = base64.b64decode(shard_b64string.encode()) 
-    shard_tensor = torch.from_numpy(np.frombuffer(np_array_bytes), dtype=np.float32) 
+    shard_tensor = torch.from_numpy(np.frombuffer(np_array_bytes, dtype=np.float32))
     return shard_tensor 
 
 def get_all_latest_parameter_shards(): 
     shard_uuids = pc.get_all_latest_parameter_server_shard_uuids() 
-    b64_idx_pairs = cc.get_parameter_shards(shard_uuids) 
-    b64_idx_pairs.sort(key = lambda x: x[1]) 
-    shard_b64strings = [x[0] for x in b64_idx_pairs] 
+    shard_b64strings = cc.get_parameter_shard_b64strs(shard_uuids) 
     shards = [unpack_shard_b64string(b64str) for b64str in shard_b64strings] 
     return shards 
 
-def recombine_tensors_shards_into_parameters(tensor_shards, parameters): 
+def recombine_tensors_shards_into_parameters(tensor_shards, parameters: list): 
     '''
     Read through `flat_tensor` assigning values to each parameter.
     Assignment is in-place! 
     '''
-    if len(tensor_shards) != len(parameters): 
-        print('Error: `len(tensor_shards) != len(parameters)`!') 
+    if isinstance(parameters, types.GeneratorType): \
+        parameters = [p for p in parameters] 
+    if len(tensor_shards) != TOTAL_GRADIENT_SHARDS: 
+        print(f'Error: `len(tensor_shards) != {TOTAL_GRADIENT_SHARDS}`!') 
         return None 
     ## tensor shards arrive in approximately equally-sized arrays 
     flat_tensor = torch.cat(tensor_shards) 
@@ -156,11 +168,11 @@ def recombine_tensors_shards_into_parameters(tensor_shards, parameters):
         ## get total floats in tensor 
         parameter_size = p.detach().reshape((-1,)).shape[0] 
         ## get tensor shape 
-        parameter_shape = p.shape() 
+        parameter_shape = p.shape 
         ## extract parameter-sized tensor and allocate it into parameter 
         flat_parameter_tensor = flat_tensor[cursor:(cursor + parameter_size)] 
         parameter_tensor = flat_parameter_tensor.reshape(parameter_shape) 
-        p.copy_(parameter_tensor) 
+        p.data = parameter_tensor 
         ## increment cursor 
         cursor += parameter_size 
         pass 

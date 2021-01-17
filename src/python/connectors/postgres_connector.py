@@ -229,10 +229,14 @@ class PostgresConnector(__StorageABC):
 
     def init_grad_shard_storage(self): 
         sql1 = 'CREATE DATABASE structured;' 
-        sql2 = 'CREATE TABLE timestamped_b64_store(b64string TEXT, timestamp TIMESTAMP);'
+        sql2 = 'CREATE TABLE IF NOT EXISTS timestamped_b64_store(b64string TEXT, timestamp TIMESTAMP);'
         self.connection = psycopg2.connect(user='postgres', host=self.url, port='5432', password=self.secret) 
         self.connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
-        self.__exec(sql1) 
+        try: 
+            self.__exec(sql1)
+        except Exception as e: 
+            if 'already exists' in str(e): 
+                print('database `structured` already exists, will not attempt recreation')  
         self.close_connection()  
         self.__exec(sql2) 
         pass 

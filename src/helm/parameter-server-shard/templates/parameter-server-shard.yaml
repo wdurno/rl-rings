@@ -32,8 +32,6 @@ spec:
         - name: listener  
           image: {{ .Values.docker_server }}/ai:{{ .Values.ai_image_tag }} 
           env:
-            - name: DISTRIBUTED_ROLE 
-              value: PARAMETER_SERVER 
             - name: MINIO_ACCESSKEY
               valueFrom:
                 secretKeyRef:
@@ -61,8 +59,6 @@ spec:
         - name: integrator 
           image: {{ .Values.docker_server }}/ai:{{ .Values.ai_image_tag }}
           env:
-            - name: DISTRIBUTED_ROLE
-              value: PARAMETER_SERVER
             - name: MINIO_ACCESSKEY
               valueFrom:
                 secretKeyRef:

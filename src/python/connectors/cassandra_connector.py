@@ -123,10 +123,11 @@ class CassandraConnector(__StorageABC):
         'DEPRECATED'
         return self.__get_objs(uuid_list, 'gradients')
     
-    def get_parameter_shards(self, uuid_list): 
-        return self.__get_objs(uuid_list, 'parameter_shards')
+    def get_parameter_shard_b64strs(self, uuid_list): 
+        return self.__get_objs(uuid_list, 'parameter_shards', return_b64str=True)
 
-    def __get_objs(self, uuid_list, table): 
+    def __get_objs(self, uuid_list, table, return_b64str=False):
+        'returns results in order'
         ## start async requests 
         async_responses = [] 
         for _uuid in uuid_list: 
@@ -145,7 +146,10 @@ class CassandraConnector(__StorageABC):
             if len(b64_str_list) > 0: 
                 ## first row, first column 
                 b64_str = b64_str_list[0][0] 
-                obj = unpack_obj(b64_str) 
+                obj = b64_str
+                if not return_b64str: 
+                    obj = unpack_obj(b64_str) 
+                    pass 
                 objs.append(obj) 
                 pass 
         return objs

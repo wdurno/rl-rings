@@ -5,6 +5,7 @@ import time
 import uuid 
 import random
 import minerl
+import traceback 
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -24,7 +25,7 @@ from util import get_latest_model, upload_transition, upload_metrics, sample_tra
 ## cluster role 
 from cluster_config import ROLE, SIMULATION_ROLE, GRADIENT_CALCULATION_ROLE, \
         PARAMETER_SHARD_COMBINER_ROLE, SINGLE_NODE_ROLE, GRADIENT_SHARD_NUMBER, \
-        TOTAL_GRADIENT_SHARDS
+        TOTAL_GRADIENT_SHARDS, PARAMETER_SERVER_ROLE
 
 ## constants 
 instance_id = uuid.uuid1().int >> 16 
@@ -560,18 +561,30 @@ def parameter_shard_combiner(publish_attempt_wait_time=90, model_name:str='model
             print('model written: '+str(path)) 
         else: 
             print('Waiting '+str(publish_attempt_wait_time)+' seconds before attempting to gather more shards...') 
-            sleep(publish_attempt_wait_time) 
+            time.sleep(publish_attempt_wait_time) 
             pass 
     pass 
 
 if __name__ == '__main__':
-    if ROLE == SINGLE_NODE_ROLE: 
-        train(10000)
-    if ROLE == SIMULATION_ROLE:
-        train(None) 
-    if ROLE == GRADIENT_CALCULATION_ROLE:
-        grad_server() 
-    if ROLE == PARAMETER_SHARD_COMBINER_ROLE:
-        parameter_shard_combiner() 
-    if ROLE == PARAMETER_SERVER_ROLE: 
-        parameter_server() 
+    while True: 
+        try: 
+            if ROLE == SINGLE_NODE_ROLE: 
+                print('running single role...') 
+                train(10000)
+            if ROLE == SIMULATION_ROLE:
+                print('running simulation role...') 
+                train(None) 
+            if ROLE == GRADIENT_CALCULATION_ROLE:
+                print('running gradient calculation role...') 
+                grad_server() 
+            if ROLE == PARAMETER_SHARD_COMBINER_ROLE:
+                print('running parameter shard combiner role...') 
+                parameter_shard_combiner() 
+            if ROLE == PARAMETER_SERVER_ROLE: 
+                print('running parameter server role...') 
+                parameter_server() 
+        except Exception as e: 
+            traceback.print_exc() 
+            print(e)
+            print('exception occurred, sleeping 30 seconds...') 
+            time.sleep(30) 
