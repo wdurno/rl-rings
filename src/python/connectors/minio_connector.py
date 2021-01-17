@@ -65,7 +65,8 @@ class MinIOConnector(__StorageABC):
     def set(self, path, blob: bytes, bucket='models'): 
         'write a blob to storage'
         connection = self.__get_connection() 
-        connection.put_object(bucket, path, io.BytesIO(blob), len(blob))
+        ## minio lib isn't very good at getting threads, so no parallelism 
+        connection.put_object(bucket, path, io.BytesIO(blob), len(blob), num_parallel_uploads=1) 
         pass 
 
     def set_gradient(self, _uuid, grad):

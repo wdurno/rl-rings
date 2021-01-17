@@ -223,7 +223,7 @@ class PostgresConnector(__StorageABC):
         ON x.shard_index = y.shard_index AND x.timestamp = y.timestamp; 
         '''
         row_list = self.__exec(sql) 
-        return [(str(row[0]), int(row[1])) for row in row_list]
+        return [str(row[0]) for row in row_list]
 
     #### PARAMETER SERVER SHARD LOCAL DB 
 
