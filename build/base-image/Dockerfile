@@ -14,5 +14,6 @@ RUN apt-get update && \
 	x11-xserver-utils \
 	python3-psycopg2 && \
     pip3 install -r /python-requirements/model-requirements.txt && \
-    pip3 install -r /python-requirements/connector-requirements.txt 
+    pip3 install -r /python-requirements/connector-requirements.txt && \
+    pip3 install -r /python-requirements/parameter-server-requirements.txt 
 

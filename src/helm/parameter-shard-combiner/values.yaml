@@ -1,7 +1,7 @@
 
-name: "gradient-calculation"
+name: "parameter-shard-combiner"
 docker_server: ""
 ai_image_tag: "" 
 total_gradient_shards: 0 
-replicas: 6 
+replicas: 1
 

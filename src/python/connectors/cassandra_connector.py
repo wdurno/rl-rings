@@ -77,9 +77,16 @@ class CassandraConnector(__StorageABC):
             b64data text 
         ); 
         '''
+        cmd4 = '''
+        CREATE TABLE IF NOT EXISTS cassandra.parameter_shards (
+            id uuid PRIMARY KEY,
+            b64data text 
+        ); 
+        '''
         self.__exec(cmd1, debug=True) 
         self.__exec(cmd2, debug=True) 
-        self.__exec(cmd3, debug=True) 
+        ## self.__exec(cmd3, debug=True) # deprecated 
+        self.__exec(cmd4, debug=True) 
         pass 
     
     def insert_game_transition(self, obj): 
@@ -114,9 +121,13 @@ class CassandraConnector(__StorageABC):
 
     def get_gradients(self, uuid_list): 
         'DEPRECATED'
-        return self.__get_objs(uuid_list, 'gradients') 
+        return self.__get_objs(uuid_list, 'gradients')
+    
+    def get_parameter_shard_b64strs(self, uuid_list): 
+        return self.__get_objs(uuid_list, 'parameter_shards', return_b64str=True)
 
-    def __get_objs(self, uuid_list, table): 
+    def __get_objs(self, uuid_list, table, return_b64str=False):
+        'returns results in order'
         ## start async requests 
         async_responses = [] 
         for _uuid in uuid_list: 
@@ -135,7 +146,10 @@ class CassandraConnector(__StorageABC):
             if len(b64_str_list) > 0: 
                 ## first row, first column 
                 b64_str = b64_str_list[0][0] 
-                obj = unpack_obj(b64_str) 
+                obj = b64_str
+                if not return_b64str: 
+                    obj = unpack_obj(b64_str) 
+                    pass 
                 objs.append(obj) 
                 pass 
         return objs
@@ -153,6 +167,17 @@ class CassandraConnector(__StorageABC):
         row_list = self.__exec(cmd) 
         grad = unpack_obj(row_list[0].b64data) 
         return grad 
+
+    def insert_parameter_shard_b64(self, _uuid, shard_b64_string): 
+        cmd = f"INSERT INTO cassandra.parameter_shards (id, b64data) VALUES ({_uuid}, '{shard_b64_string}');" 
+        self.__exec(cmd)
+        pass 
+
+    def get_parameter_shard_b64(self, _uuid): 
+        cmd = f"SELECT b64data FROM cassandra.parameter_shards WHERE id={_uuid};"
+        row_list = self.__exec(cmd) 
+        shard_b64_string = row_list[0].b64data 
+        return shard_b64_string
     pass 
 
 

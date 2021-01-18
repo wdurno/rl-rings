@@ -5,6 +5,7 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import uuid 
 from datetime import datetime, timedelta  
 import pandas as pd 
+import os 
 
 class PostgresConnector(__StorageABC): 
     'Manipulate a postgres instance'
@@ -53,6 +54,8 @@ class PostgresConnector(__StorageABC):
             self.connection = None 
         pass 
 
+    #### DISTRIBUTED STORAGE METHODS 
+
     def init_storage(self): 
         '''
         Initialize storage instance for the entire cluster. 
@@ -69,7 +72,8 @@ class PostgresConnector(__StorageABC):
         sql4 = 'CREATE TABLE grad_ids(grad_id UUID PRIMARY KEY, timestamp TIMESTAMP);'
         sql5 = 'CREATE TABLE latest_model(model_id INT4 PRIMARY KEY, path TEXT);'
         sql6 = "INSERT INTO latest_model VALUES (0, '');" 
-        sql7 = 'CREATE TABLE parameter_server_state(last_model_publish_time TIMESTAMP, last_grad_time TIMESTAMP)'
+        sql7 = 'CREATE TABLE parameter_server_state(last_model_publish_time TIMESTAMP, last_grad_time TIMESTAMP);'
+        sql8 = 'CREATE TABLE parameter_server_shards(shard_id UUID PRIMARY KEY, shard_index INT4, timestamp TIMESTAMP);'
         ## init DB requires special connection 
         self.connection = psycopg2.connect(user='postgres', host=self.url, port='5432', password=self.secret)
         self.connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
@@ -82,6 +86,7 @@ class PostgresConnector(__StorageABC):
         self.__exec(sql5, debug=True) 
         self.__exec(sql6, debug=True) 
         self.__exec(sql7, debug=True) 
+        self.__exec(sql8, debug=True)
         pass
 
     def write_transition_id(self, _uuid):
@@ -171,5 +176,84 @@ class PostgresConnector(__StorageABC):
             sql2 = f"UPDATE parameter_server_state SET last_grad_time='{last_grad_time}';"
             self.__exec(sql2) 
             pass 
+        pass 
+
+    def register_parameter_server_shard(self, _uuid, shard_index): 
+        'after writing shard to cassandra, register uuid here' 
+        timestamp = datetime.now() 
+        sql = f"INSERT INTO parameter_server_shards VALUES ('{_uuid}', {shard_index}, '{timestamp}');" 
+        self.__exec(sql)  
+        pass 
+
+    def get_latest_parameter_server_shard_uuid(self, shard_index): 
+        'returns a uuid str or None'
+        sql = f'''
+        SELECT shard_id 
+        FROM 
+        (
+            SELECT shard_id, shard_index, timestamp 
+            FROM parameter_server_shards 
+            WHERE shard_index={shard_index} 
+        )x 
+        INNER JOIN
+        (
+            SELECT shard_index, MAX(timestamp) AS timestamp 
+            FROM parameter_server_shards 
+            GROUP BY shard_index
+        )y
+        ON x.shard_index = y.shard_index AND x.timestamp = y.timestamp;
+        '''
+        rows = self.__exec(sql) 
+        if len(rows) > 1: 
+            raise ValueError('Bad sql returns multiple rows!\n'+sql)  
+        if len(rows) == 1:
+            return str(rows[0][0]) 
+        return None 
+
+    def get_all_latest_parameter_server_shard_uuids(self): 
+        sql = '''
+        SELECT shard_id 
+        FROM parameter_server_shards AS y 
+        INNER JOIN 
+        (
+            SELECT shard_index, MAX(timestamp) AS timestamp 
+            FROM parameter_server_shards 
+            GROUP BY shard_index
+        )x 
+        ON x.shard_index = y.shard_index AND x.timestamp = y.timestamp; 
+        '''
+        row_list = self.__exec(sql) 
+        return [str(row[0]) for row in row_list]
+
+    #### PARAMETER SERVER SHARD LOCAL DB 
+
+    def init_grad_shard_storage(self): 
+        sql1 = 'CREATE DATABASE structured;' 
+        sql2 = 'CREATE TABLE IF NOT EXISTS timestamped_b64_store(b64string TEXT, timestamp TIMESTAMP);'
+        self.connection = psycopg2.connect(user='postgres', host=self.url, port='5432', password=self.secret) 
+        self.connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
+        try: 
+            self.__exec(sql1)
+        except Exception as e: 
+            if 'already exists' in str(e): 
+                print('database `structured` already exists, will not attempt recreation')  
+        self.close_connection()  
+        self.__exec(sql2) 
+        pass 
+
+    def write_grad_shard(self, b64string): 
+        timestamp = datetime.now() 
+        sql1 = f"INSERT INTO timestamped_b64_store VALUES ('{b64string}', '{timestamp}');" 
+        self.__exec(sql1) 
+        pass 
+
+    def read_grad_shard_after_timestamp(self, timestamp): 
+        sql = f"SELECT b64string FROM timestamped_b64_store WHERE timestamp >= '{timestamp}';" 
+        row_list = self.__exec(sql) 
+        return [b64_row[0] for b64_row in row_list] 
+
+    def delete_grad_shards_before_timestamp(self, timestamp): 
+        sql = f"SELECT FROM timestamped_b64_store WHERE timestamp < '{timestamp}';" 
+        self.__exec(sql) 
         pass 
     pass

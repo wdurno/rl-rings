@@ -5,6 +5,7 @@ import time
 import uuid 
 import random
 import minerl
+import traceback 
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -17,11 +18,14 @@ from connectors import pc, cc, mc
 
 from deep_net import DQN
 from replay_memory import rpm
-from util import get_latest_model, upload_transition, upload_metrics, sample_transitions  
+from util import get_latest_model, upload_transition, upload_metrics, sample_transitions, \
+        shard_gradients, publish_grad_shards, get_all_latest_parameter_shards, \
+        recombine_tensors_shards_into_parameters, shard_model_parameters, pack_shard  
 
 ## cluster role 
 from cluster_config import ROLE, SIMULATION_ROLE, GRADIENT_CALCULATION_ROLE, \
-        PARAMETER_SERVER_ROLE, SINGLE_NODE_ROLE 
+        PARAMETER_SHARD_COMBINER_ROLE, SINGLE_NODE_ROLE, GRADIENT_SHARD_NUMBER, \
+        TOTAL_GRADIENT_SHARDS, PARAMETER_SERVER_ROLE
 
 ## constants 
 instance_id = uuid.uuid1().int >> 16 
@@ -38,9 +42,6 @@ def time_limit(time_out):
         return False
 
 class Agent(object):
-    ## TODO replace self.memory with service client if ROLE != SINGLE_NODE_ROLE 
-    ## TODO load latest model per iteration if ROLE in {SIMULATION_ROLE, GRADIENT_CALCULATION_ROLE} 
-    ## TODO learning should only occur if ROLE in {SINGLE_NODE_ROLE, PARAMETER_SERVER_ROLE} 
     
     def __init__(self, **kwargs):
         self.lr = 3e-4
@@ -333,7 +334,7 @@ def train(n_episodes):
             if path is not None: 
                 ## latest model obtained
                 agent1.load_model(path) 
-                print('loaded mode: '+str(path)+'...') 
+                print('loaded model: '+str(path)+'...') 
         ## continue loop? 
         i_episode += 1 
         if n_episodes is not None: 
@@ -410,13 +411,17 @@ def grad_server(batch_size=100, model_wait_time=30, transition_wait_time=30):
                 ## calculate gradeints 
                 grads = agent.get_grads(game_transitions) 
                 ## publish gradients 
-                grad_uuid = pc.get_registered_grad_id() 
-                mc.set_gradient(grad_uuid, grads) 
-                print('Gradient published! ' + str(grad_uuid)) 
+                grad_shards = shard_gradients(grads, TOTAL_GRADIENT_SHARDS) 
+                successful_writes = publish_grad_shards(grad_shards) 
+                print('successfully wrote '+str(successful_writes)+' of '+str(TOTAL_GRADIENT_SHARDS)+\
+                        ' shards') 
     pass
 
 def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publish_frequency: int=60): 
     '''
+    DEPRICATED!
+    use `parameter_server_shard` instead
+    ---
     integrate gradients, publish models
     inputs:
       - `model`: model prefix for writing to MinIO 
@@ -493,14 +498,93 @@ def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publ
                     pc.update_parameter_server_state(last_model_publish_time=last_publish_time) 
                     print('model written: '+str(path)) 
                     pass 
+    pass
+
+def parameter_shard_combiner(publish_attempt_wait_time=90, model_name:str='model'): 
+    '''
+    regularly combines parameter shards and publishes to minio
+    '''
+    ## init
+    agent = Agent() 
+    agent.update_device() 
+    ## get state 
+    last_publish_time, last_grad_time = pc.get_parameter_server_state() 
+    ## check for latest model
+    model_id, model_minio_path = pc.get_latest_model_path()
+    ## cast constants 
+    model_publish_frequency = timedelta(seconds=publish_attempt_wait_time)  
+    ## if idx == 0, publish a random model 
+    if model_id == 0 or model_minio_path == '': 
+        ## no model found 
+        ## publish first parameter shards
+        parameter_shards = shard_model_parameters(agent.policy.parameters(), TOTAL_GRADIENT_SHARDS)
+        ## write each to cassandra, then publish to postgres
+        for idx, parameter_shard in enumerate(parameter_shards):
+            _uuid = uuid.uuid1()
+            shard_b64_string = pack_shard(parameter_shard)
+            cc.insert_parameter_shard_b64(_uuid, shard_b64_string)
+            pc.register_parameter_server_shard(_uuid, idx)
+            pass 
+        ## publishing first to MinIO  
+        print('No model found, writing first...') 
+        model_id += 1 
+        path = str(model_name) + '-' + str(model_id) + '-DQN.pkl' 
+        local_path = os.path.join('/models', path) ## TODO code duplication, refactor needed, move to minio  
+        agent.save_model(local_path) 
+        with open(local_path, 'rb') as f:
+            mc.set(path, f.read()) 
+            pass
+        ## increment `model_id` and set `model_minio_path` globally  
+        pc.set_model_path(path) 
+        print('initial model registered: '+str(path)) 
+        pass
+    ## forever publish new models 
+    while True: 
+        ## attempt to get grads 
+        shards = get_all_latest_parameter_shards() 
+        parameters = agent.policy.parameters() 
+        parameters = recombine_tensors_shards_into_parameters(shards, parameters) 
+        now = datetime.now() 
+        if parameters is not None and now - last_publish_time > model_publish_frequency: 
+            ## time to publish a model 
+            model_id += 1 
+            path = str(model_name) + '-' + str(model_id) + '-DQN.pkl' 
+            local_path = os.path.join('/models', path) ## TODO global variable, put in config 
+            agent.save_model(local_path) 
+            with open(local_path, 'rb') as f:
+                mc.set(path, f.read()) 
+                pass 
+            pc.set_model_path(path) 
+            ## update time 
+            last_publish_time = now  
+            pc.update_parameter_server_state(last_model_publish_time=last_publish_time) 
+            print('model written: '+str(path)) 
+        else: 
+            print('Waiting '+str(publish_attempt_wait_time)+' seconds before attempting to gather more shards...') 
+            time.sleep(publish_attempt_wait_time) 
+            pass 
     pass 
 
 if __name__ == '__main__':
-    if ROLE == SINGLE_NODE_ROLE: 
-        train(10000)
-    if ROLE == SIMULATION_ROLE:
-        train(None) 
-    if ROLE == GRADIENT_CALCULATION_ROLE:
-        grad_server() 
-    if ROLE == PARAMETER_SERVER_ROLE:
-        parameter_server() 
+    while True: 
+        try: 
+            if ROLE == SINGLE_NODE_ROLE: 
+                print('running single role...') 
+                train(10000)
+            if ROLE == SIMULATION_ROLE:
+                print('running simulation role...') 
+                train(None) 
+            if ROLE == GRADIENT_CALCULATION_ROLE:
+                print('running gradient calculation role...') 
+                grad_server() 
+            if ROLE == PARAMETER_SHARD_COMBINER_ROLE:
+                print('running parameter shard combiner role...') 
+                parameter_shard_combiner() 
+            if ROLE == PARAMETER_SERVER_ROLE: 
+                print('running parameter server role...') 
+                parameter_server() 
+        except Exception as e: 
+            traceback.print_exc() 
+            print(e)
+            print('exception occurred, sleeping 30 seconds...') 
+            time.sleep(30) 

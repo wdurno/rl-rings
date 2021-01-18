@@ -4,24 +4,26 @@ metadata:
     name: {{ .Values.name }} 
     labels:
       name: {{ .Values.name }}
-      app: parameter-server 
+      app: parameter-shard-combiner 
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicas }} 
   selector:
     matchLabels:
-      app: parameter-server 
+      app: parameter-shard-combiner 
   template:
     metadata:
       labels:
         name: {{ .Values.name }} 
-        app: parameter-server
+        app: parameter-shard-combiner
     spec: 
       containers: 
         - name: {{ .Values.name }} 
-          image: {{ .Values.docker_server }}/ai:{{ .Values.ai_image_tag }} 
+          image: {{ .Values.docker_server }}/ai:{{ .Values.ai_image_tag }}
           env:
             - name: DISTRIBUTED_ROLE 
-              value: PARAMETER_SERVER 
+              value: PARAMETER_SHARD_COMBINER
+            - name: TOTAL_GRADIENT_SHARDS
+              value: "{{ .Values.total_gradient_shards }}" 
             - name: MINIO_ACCESSKEY
               valueFrom:
                 secretKeyRef:
@@ -41,8 +43,8 @@ spec:
           imagePullPolicy: Always
           resources:
             requests:
-              memory: "3500Mi"
-              cpu: "1500m"
+              memory: "2000Mi"
+              cpu: "1000m"
           volumeMounts:
             - name: models-vol
               mountPath: /models

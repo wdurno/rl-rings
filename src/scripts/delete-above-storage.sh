@@ -1,1 +1,2 @@
-helm uninstall simulation gradient-calculation parameter-server 
+helm uninstall simulation gradient-calculation \
+	parameter-shard-combiner $(helm list --short | grep parameter-server) 
