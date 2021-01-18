@@ -327,12 +327,14 @@ def train(n_episodes):
     rew_all = []
     i_episode = 0 
     continue_training = True 
+    current_model = 'random' 
     while continue_training:
         ## get latest model 
         if ROLE == SIMULATION_ROLE:
             path = get_latest_model() 
             if path is not None: 
                 ## latest model obtained
+                current_model = path
                 agent1.load_model(path) 
                 print('loaded model: '+str(path)+'...') 
         ## continue loop? 
@@ -367,7 +369,7 @@ def train(n_episodes):
             print('epi %d all frame %d frame %5d Q %2.5f loss %2.5f reward %3d (%3.3f)'%\
                     (i_episode, all_frame, frame, Q, loss, _reward, np.mean(rew_all[-50:])))
         if ROLE == SIMULATION_ROLE:
-            ## TODO store metrics 
+            pc.write_metrics(minerl_mission, current_model, _reward, frame) 
             print('epi %d all frame %d frame %5d reward %3d (%3.3f)'%\
                     (i_episode, all_frame, frame, _reward, np.mean(rew_all[-50:])))
         pass
