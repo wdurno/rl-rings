@@ -11,7 +11,7 @@ import grequests
 ## constants 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
 
-from cluster_config import TOTAL_GRADIENT_SHARDS 
+from model.cluster_config import TOTAL_GRADIENT_SHARDS 
 
 def upload_transition(transition, retry_delay=60):
     continue_attempting = True 
@@ -113,7 +113,7 @@ def publish_grad_shards(shards: list):
     async_requests = [] 
     for i in range(n_shards): 
         b64string = pack_shard(shards[i]) 
-        r = grequests.post('http://parameter-shard-server-'+str(i)+'/', data=b64string.encode()) 
+        r = grequests.post('http://parameter-server-shard-'+str(i)+':8080/', data=b64string.encode()) 
         async_requests.append(r) 
         pass 
     responses = grequests.map(async_requests) 
@@ -121,8 +121,10 @@ def publish_grad_shards(shards: list):
     for r in responses: 
         if r is None: 
             failed_responses.append(r) 
+            print('No response recieved!') 
         elif r.status_code != 200:
             failed_responses.append(r) 
+            print(r.text)
     for failed_response in failed_responses: 
         print('shard publish failed!') 
         print(failed_response)

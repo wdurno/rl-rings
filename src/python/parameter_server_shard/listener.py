@@ -15,22 +15,23 @@ app = Flask(__name__)
 @app.route('/', methods=['POST']) 
 def add_grad():
     'post grad shard to local db for asynchronous integration'
-    ## constants 
-    args = parser.parse_args() 
-    db_password = args.db_password 
-    if db_password is None: 
-        ## get from env 
-        db_password = os.environ['POSTGRES_SECRET']
-    db_password = db_password.replace('\n', '')
     ## get grad shard data 
     data = request.get_data() 
-    b64string = data.encode() ## assumes b64 bytes 
+    b64string = data.decode() ## assumes b64 bytes 
     ## write to db 
-    local_pg = postgres_connector(args.db_url, args.db_password.replace('\n', '')) 
     local_pg.write_grad_shard(b64string) 
-    local_pg.close_connection() 
+    print('grad written') 
     return jsonify('success') 
 
 if __name__ == '__main__': 
+    ## config 
     args = parser.parse_args() 
+    db_password = args.db_password
+    if db_password is None:
+        ## get from env
+        db_password = os.environ['POSTGRES_SECRET']
+    db_password = db_password.replace('\n', '')
+    ## init DB connector 
+    local_pg = postgres_connector.PostgresConnector(args.db_url, db_password)
+    ## serve 
     serve(app, host='0.0.0.0', port=5000) 

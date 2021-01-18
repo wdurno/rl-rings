@@ -545,7 +545,7 @@ def parameter_shard_combiner(publish_attempt_wait_time=90, model_name:str='model
         parameters = agent.policy.parameters() 
         parameters = recombine_tensors_shards_into_parameters(shards, parameters) 
         now = datetime.now() 
-        if parameters is not None and last_publish_time - now > model_publish_frequency: 
+        if parameters is not None and now - last_publish_time > model_publish_frequency: 
             ## time to publish a model 
             model_id += 1 
             path = str(model_name) + '-' + str(model_id) + '-DQN.pkl' 

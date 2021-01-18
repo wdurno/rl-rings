@@ -55,16 +55,19 @@ if __name__ == '__main__':
         try: 
             ## init local state 
             local_pc = init_local_db() 
+            print('local DB initialized...') 
             shard_tensor = get_current_shard(args.shard_index) 
+            print('init shard obtained...') 
             ## init optimizer
-            param_dict = {'shard': torch.nn.parameter.Parameter(shard_tensor)} 
-            opt = torch.optim.Adam(param_dict, lr=args.learning_rate) 
+            parameter_shard = torch.nn.parameter.Parameter(shard_tensor) 
+            opt = torch.optim.Adam([parameter_shard], lr=args.learning_rate) 
+            print('optimizer initialized...') 
             ## track time for shard writing 
             last_shard_write_time = time() 
+            last_shard_read_time = datetime.now() 
             while True:
                 ## listen for grads and integrate them indefinitely 
-                now = datetime.now() 
-                grad_shard_b64_list = local_pc.read_grad_shard_after_timestamp(now) 
+                grad_shard_b64_list = local_pc.read_grad_shard_after_timestamp(last_shard_read_time) 
                 grad_shards = [unpack_shard_b64string(b64) for b64 in grad_shard_b64_list] 
                 if len(grad_shards) == 0:
                     print('no grads found, sleeping '+str(grad_wait_time)+' seconds...') 
@@ -72,17 +75,20 @@ if __name__ == '__main__':
                 else: 
                     print('integrating '+str(len(grad_shards))+' grad shard vectors...') 
                     ## update param's grad 
-                    param_dict['shard'].grad = g 
-                    opt.step() 
+                    for g in grad_shards: 
+                        parameter_shard.grad = g 
+                        opt.step() 
                     ## delete old grad shards from local cache 
-                    local_pc.delete_grad_shards_before_timestamp(now) 
+                    local_pc.delete_grad_shards_before_timestamp(last_shard_read_time) 
+                    last_shard_read_time = datetime.now() 
+                    ## check if should write parameter shard 
                     t = time() 
                     if t - last_shard_write_time > shard_write_time: 
                         ## write shard to cassandra and register with postgres 
                         last_shard_write_time = t 
                         _uuid = uuid.uuid1() 
                         ## serialize 
-                        shard = param_dict['shard'].detach() 
+                        shard = parameter_shard.detach() 
                         shard_b64string = pack_shard(shard) 
                         ## write to cassandra 
                         cc.insert_parameter_shard_b64(_uuid, shard_b64string) 
