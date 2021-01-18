@@ -1,3 +1,8 @@
+
+#### v0.1.1
+
+Parameters sharded, resolving a network bottleneck. 
+
 #### v0.1.0 
 
 Build automation stable. Optimization iterations functioning. 
