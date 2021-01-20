@@ -157,7 +157,7 @@ def deploy_acr_secret():
         pass
     cmd2 = 'kubectl create secret docker-registry acr-creds '+\
         f'--docker-server=$(cat {repo_dir}/secret/acr/server) '+\
-        '--docker-username=00000000-0000-0000-0000-000000000000 '+\
+        '--docker-username=RlHypothesis2AzureContainerRegsitry1 '+\
         f'--docker-password=$(cat {repo_dir}/secret/acr/token)'
     run(cmd2) 
     pass

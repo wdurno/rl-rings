@@ -21,7 +21,7 @@ echo -e ${GREEN}running docker build...${NC}
 DOCKER_SERVER=$(cat ${repo_dir}/secret/acr/server)
 DOCKER_TOKEN=$(cat ${repo_dir}/secret/acr/token)
 IMAGE_NAME=${DOCKER_SERVER}/ai:${rl_hypothesis_2_ai_image_tag}
-echo ${DOCKER_TOKEN} | docker login ${DOCKER_SERVER} --username 00000000-0000-0000-0000-000000000000 --password-stdin
+echo ${DOCKER_TOKEN} | docker login ${DOCKER_SERVER} --username RlHypothesis2AzureContainerRegsitry1 --password-stdin
 docker build -t ${IMAGE_NAME} ${BUILD_DIR} --build-arg BASE_IMAGE=${DOCKER_SERVER}/base-image:v0.0.1
 
 if [ $? != 0 ]; then
