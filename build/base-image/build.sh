@@ -29,5 +29,5 @@ if [ $? != 0 ]; then
 fi
 
 echo -e ${GREEN}pushing docker image to resgistry...${NC}
-echo ${DOCKER_TOKEN} | docker login ${DOCKER_SERVER} --username 00000000-0000-0000-0000-000000000000 --password-stdin
+echo ${DOCKER_TOKEN} | docker login ${DOCKER_SERVER} --username RlHypothesis2AzureContainerRegsitry1 --password-stdin
 docker push ${IMAGE_NAME}

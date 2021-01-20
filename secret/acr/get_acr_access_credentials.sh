@@ -4,5 +4,8 @@ then
   exit 1
 fi
 
-az acr login --name RlHypothesis2AzureContainerRegsitry1 --expose-token | \
-python ${repo_dir}/secret/acr/unpack_acr_json.py  
+az acr show -n RlHypothesis2AzureContainerRegsitry1 -o json | \
+	python ${repo_dir}/secret/acr/unpack_acr_json.py --server
+
+az acr credential show -n RlHypothesis2AzureContainerRegsitry1 -o json | \
+	python ${repo_dir}/secret/acr/unpack_acr_json.py --password

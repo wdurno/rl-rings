@@ -327,12 +327,14 @@ def train(n_episodes):
     rew_all = []
     i_episode = 0 
     continue_training = True 
+    current_model = 'random' 
     while continue_training:
         ## get latest model 
         if ROLE == SIMULATION_ROLE:
             path = get_latest_model() 
             if path is not None: 
                 ## latest model obtained
+                current_model = path
                 agent1.load_model(path) 
                 print('loaded model: '+str(path)+'...') 
         ## continue loop? 
@@ -367,7 +369,7 @@ def train(n_episodes):
             print('epi %d all frame %d frame %5d Q %2.5f loss %2.5f reward %3d (%3.3f)'%\
                     (i_episode, all_frame, frame, Q, loss, _reward, np.mean(rew_all[-50:])))
         if ROLE == SIMULATION_ROLE:
-            ## TODO store metrics 
+            pc.write_metrics(minerl_mission, current_model, _reward, frame) 
             print('epi %d all frame %d frame %5d reward %3d (%3.3f)'%\
                     (i_episode, all_frame, frame, _reward, np.mean(rew_all[-50:])))
         pass
@@ -390,8 +392,8 @@ def grad_server(batch_size=100, model_wait_time=30, transition_wait_time=30):
       - Writes gradient UUIDs and timestamps to postgres
       - Writes gradients to cassandra 
     '''
-    ## init 
-    agent = Agent() 
+    ### init 
+    #agent = Agent() 
     while True: 
         ## pull latest model 
         model_path = get_latest_model()  
@@ -399,23 +401,32 @@ def grad_server(batch_size=100, model_wait_time=30, transition_wait_time=30):
             print('No model found. Sleeping '+str(model_wait_time)+' seconds...') 
             time.sleep(model_wait_time) 
         else:
-            ## load model 
-            agent.load_model(model_path) 
-            agent.update_device() 
-            ## sample game transitions 
-            game_transitions = sample_transitions(batch_size) 
-            if game_transitions is None: 
-                print('Sampled transition of length zero! Sleeping '+str(transition_wait_time)+' seconds...') 
-                time.sleep(transition_wait_time)
-            else: 
-                ## calculate gradeints 
-                grads = agent.get_grads(game_transitions) 
-                ## publish gradients 
-                grad_shards = shard_gradients(grads, TOTAL_GRADIENT_SHARDS) 
-                successful_writes = publish_grad_shards(grad_shards) 
-                print('successfully wrote '+str(successful_writes)+' of '+str(TOTAL_GRADIENT_SHARDS)+\
-                        ' shards') 
+            __grad_iter(model_path, batch_size, transition_wait_time) 
     pass
+
+def __grad_iter(model_path: str, batch_size: int, transition_wait_time: int): 
+    '''
+    ~~use this function's scope to remedy memory leak~~
+    This doesn't work. Using ACR passwords as mitigation...
+    '''
+    ## load model
+    agent = Agent()
+    agent.load_model(model_path)
+    agent.update_device()
+    ## sample game transitions
+    game_transitions = sample_transitions(batch_size)
+    if game_transitions is None:
+        print('Sampled transition of length zero! Sleeping '+str(transition_wait_time)+' seconds...')
+        time.sleep(transition_wait_time)
+    else:
+        ## calculate gradeints
+        grads = agent.get_grads(game_transitions)
+        ## publish gradients
+        grad_shards = shard_gradients(grads, TOTAL_GRADIENT_SHARDS)
+        successful_writes = publish_grad_shards(grad_shards)
+        print('successfully wrote '+str(successful_writes)+' of '+str(TOTAL_GRADIENT_SHARDS)+\
+                ' shards')
+    pass 
 
 def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publish_frequency: int=60): 
     '''

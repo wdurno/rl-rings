@@ -63,11 +63,12 @@ class PostgresConnector(__StorageABC):
         '''
         sql1 = 'CREATE DATABASE structured;'
         sql2 = '''
-               CREATE TABLE metrics(game CHAR[20], 
-                   model INT4,
+               CREATE TABLE metrics(
+                   game TEXT, 
+                   model TEXT,
                    reward FLOAT4,
-                   etc FLOAT4);
-               ''' ## TODO finish data model
+                   frames INT4);
+               ''' 
         sql3 = 'CREATE TABLE transitions(transition_id UUID PRIMARY KEY);'
         sql4 = 'CREATE TABLE grad_ids(grad_id UUID PRIMARY KEY, timestamp TIMESTAMP);'
         sql5 = 'CREATE TABLE latest_model(model_id INT4 PRIMARY KEY, path TEXT);'
@@ -88,6 +89,23 @@ class PostgresConnector(__StorageABC):
         self.__exec(sql7, debug=True) 
         self.__exec(sql8, debug=True)
         pass
+
+    def write_metrics(self, game: str, model: str, reward: float, frames: int):
+        'write simulation metrics to postgres'
+        sql = f"INSERT INTO metrics VALUES ('{game}', '{model}', {reward}, {frames});"
+        self.__exec(sql)
+        pass 
+
+    def get_metrics(self): 
+        'return metrics as dataframe' 
+        sql = 'SELECT * FROM metrics;'
+        rows = self.__exec(sql) 
+        ## build df 
+        game = [row[0] for row in rows] 
+        model = [row[1] for row in rows] 
+        reward = [row[2] for row in rows] 
+        frames = [row[3] for row in rows] 
+        return pd.DataFrame({'game': game, 'model': model, 'reward': reward, 'frames': frames}) 
 
     def write_transition_id(self, _uuid):
         'write a transition uuid to postgres'

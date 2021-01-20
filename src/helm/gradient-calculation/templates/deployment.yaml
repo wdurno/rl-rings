@@ -43,7 +43,7 @@ spec:
           imagePullPolicy: Always
           resources:
             requests:
-              memory: "3500Mi"
+              memory: "4500Mi"
               cpu: "1500m"
           volumeMounts:
             - name: models-vol
