@@ -1,4 +1,8 @@
 
+#### v0.1.2
+
+Memory leak mitigated. Iterations fully stable. This is now a data science problem
+
 #### v0.1.1
 
 Parameters sharded, resolving a network bottleneck. 
