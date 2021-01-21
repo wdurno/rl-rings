@@ -13,6 +13,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch import autograd
+from multiprocessing import Process
 from datetime import datetime, timedelta 
 from connectors import pc, cc, mc 
 
@@ -401,7 +402,10 @@ def grad_server(batch_size=100, model_wait_time=30, transition_wait_time=30):
             print('No model found. Sleeping '+str(model_wait_time)+' seconds...') 
             time.sleep(model_wait_time) 
         else:
-            __grad_iter(model_path, batch_size, transition_wait_time) 
+            p = Process(target=__grad_iter, args=(model_path, batch_size, transition_wait_time,)) 
+            p.start() 
+            p.join()
+            pass 
     pass
 
 def __grad_iter(model_path: str, batch_size: int, transition_wait_time: int): 

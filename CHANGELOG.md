@@ -1,4 +1,8 @@
 
+#### v0.1.3
+
+Memory leak resolved with subprocesses. 
+
 #### v0.1.2
 
 Memory leak mitigated. Iterations fully stable. This is now a data science problem
