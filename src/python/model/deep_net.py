@@ -95,8 +95,8 @@ class DQN(nn.Module):
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
         ## Fully connected inputs: 
         ## 512: visual 
-        ## 1: compass  
-        self.fc = nn.Linear(512 + 1, atoms * outputs)
+        ## 3: compass, 1 x 3 historical steps 
+        self.fc = nn.Linear(512 + 3, atoms * outputs)
 
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1]*(num_blocks-1)
@@ -119,7 +119,7 @@ class DQN(nn.Module):
         pov = self.layer3(pov)
         pov = self.layer4(pov)
         pov = F.avg_pool2d(pov, 4)
-        pov = x.view(pov.size(0), -1) 
+        pov = pov.view(pov.size(0), -1) 
         ## aggregate data 
         x = torch.cat((pov, compass), dim=1) 
         ## dense processing 

@@ -236,7 +236,7 @@ class Agent(object):
             if not done :
                 m_obs[-1] = np2torch(obs['pov'])
                 m_inv[-1] = obs['inventory']
-                m_compass[-1] = obs.get('compass') 
+                m_compass[-1] = get_compass(obs)
                 state[-1] = state_to(m_obs[-3:], m_compass[-3:])
                 m_reward[-1] = rew
                 m_action[-1] = torch.tensor([action_num])
@@ -342,6 +342,14 @@ def envstep(env, action_num):
             return obs, reward, done, info, i+1
     return obs, reward, done, info, 4
 
+def get_compass(obs): 
+    'Compass is buggy, throwing `None` at random.'
+    compass = obs.get('compassAngle') 
+    if compass is None: 
+        compass = 0. ## TODO verify 0. is a good value--consider last observered 
+        pass
+    return compass
+
 def train(n_episodes):
     
     minerl_mission = 'MineRLNavigateDense-v0'
@@ -377,7 +385,7 @@ def train(n_episodes):
         ## simulate 
         m_obs = [np2torch(obs['pov']) for _ in range(10)] 
         m_inv = [obs['inventory'] for _ in range(10)] 
-        m_compass = [obs.get('compassAngle') for _ in range(10)] 
+        m_compass = [get_compass(obs) for _ in range(10)] 
         _reward = 0
         frame = 0
         _reward, frame = agent1.step(20000, env, m_obs, m_inv, m_compass)
