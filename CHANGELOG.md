@@ -1,4 +1,8 @@
 
+#### v0.1.4 
+
+Compass feature added
+
 #### v0.1.3
 
 Memory leak resolved with subprocesses. 
