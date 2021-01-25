@@ -102,7 +102,7 @@ class Agent(object):
 
     def projection_distribution(self, next_state, reward, done, gam):
         with torch.no_grad():
-            batch_size = next_state.size(0)
+            batch_size = next_state['pov'].size(0)
             delta_z = float(self.Vmax - self.Vmin) / (self.atoms - 1)
             support = torch.linspace(self.Vmin, self.Vmax, self.atoms).to(device)
 
@@ -347,6 +347,9 @@ def get_compass(obs):
     compass = obs.get('compassAngle') 
     if compass is None: 
         compass = 0. ## TODO verify 0. is a good value--consider last observered 
+    elif type(compass) != float:
+        ## sometimes get np.array, depending on env 
+        compass = float(compass) 
         pass
     return compass
 
