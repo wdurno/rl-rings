@@ -1,6 +1,8 @@
 import numpy as np
+from typing import Dict 
 
 import torch
+from torch import Tensor 
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.utils.weight_norm as weightNorm
@@ -91,7 +93,10 @@ class DQN(nn.Module):
         self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
-        self.fc = nn.Linear(512, atoms * outputs)
+        ## Fully connected inputs: 
+        ## 512: visual 
+        ## 3: compass, 1 x 3 historical steps 
+        self.fc = nn.Linear(512 + 3, atoms * outputs)
 
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1]*(num_blocks-1)
@@ -103,14 +108,21 @@ class DQN(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x):
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-        x = F.avg_pool2d(x, 4)
-        x = x.view(x.size(0), -1)
+    def forward(self, x: Dict[str, Tensor]): 
+        ## unpack 
+        pov = x['pov'] 
+        compass = x['compass'] 
+        ## visual processing 
+        pov = F.relu(self.bn1(self.conv1(pov)))
+        pov = self.layer1(pov)
+        pov = self.layer2(pov)
+        pov = self.layer3(pov)
+        pov = self.layer4(pov)
+        pov = F.avg_pool2d(pov, 4)
+        pov = pov.view(pov.size(0), -1) 
+        ## aggregate data 
+        x = torch.cat((pov, compass), dim=1) 
+        ## dense processing 
         x = self.fc(x)
         x = x.view(x.size(0), self.actions, self.atoms)
         x = F.softmax(x, 2)

@@ -43,17 +43,38 @@ def sample_transitions(n=100):
     if len(rows) == 0:
         return None 
     out = [] 
-    for _ in range(6): 
-        out.append([]) 
+    for col in range(6): 
+        ## first and third entries are dicts 
+        if col in [0, 2]: 
+            out.append({'pov': [], 'compass': []}) 
+        else:
+            out.append([]) 
+            pass
         pass
     for row in rows:
         for col in range(6): 
-            out[col].append(row[col]) 
+            if col in [0, 2]: 
+                pov = row[col]['pov'] 
+                compass = row[col]['compass'] 
+                out[col]['pov'].append(pov) 
+                out[col]['compass'].append(compass) 
+            else: 
+                out[col].append(row[col]) 
+                pass 
             pass
     ## convert to tensors 
     for col in range(6): 
-        tensor = torch.stack(tuple(out[col])) 
-        out[col] = tensor.to(device) 
+        if col in [0, 2]:
+            pov = out[col]['pov'] 
+            compass = out[col]['compass'] 
+            out[col] = {
+                    'pov': torch.stack(tuple(pov)),
+                    'compass': torch.stack(tuple(compass)) 
+                    } 
+        else:
+            tensor = torch.stack(tuple(out[col])) 
+            out[col] = tensor.to(device) 
+            pass 
     return out 
 
 def get_latest_model(models_dir='/models'):

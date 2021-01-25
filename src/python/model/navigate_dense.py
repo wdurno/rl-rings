@@ -70,10 +70,21 @@ class Agent(object):
         if random.random() < epsilon:
             return random.randint(0, self.actions-1)
         with torch.no_grad():
-            self.eval()
-            state = state.to(dtype=torch.float, device=device)
-            state = state.reshape([1] + list(state.shape))
-            tmp   = (self.policy(state) * self.support).sum(2).max(1)[1]
+            self.eval() 
+            ## to device 
+            pov = state['pov'] 
+            compass = state['compass'] 
+            pov = pov.to(dtype=torch.float, device=device) 
+            compass = compass.to(dtype=torch.float, device=device) 
+            ## reshape for single observation 
+            pov = pov.reshape([1] + list(pov.shape)) 
+            compass = compass.reshape([1] + list(compass.shape)) 
+            ## predict 
+            state = {
+                    'pov': pov, 
+                    'compass': compass
+                    } 
+            tmp   = (self.policy(state) * self.support).sum(2).max(1)[1] 
         return (int (tmp))
 
     def update_target(self):
@@ -91,7 +102,7 @@ class Agent(object):
 
     def projection_distribution(self, next_state, reward, done, gam):
         with torch.no_grad():
-            batch_size = next_state.size(0)
+            batch_size = next_state['pov'].size(0)
             delta_z = float(self.Vmax - self.Vmin) / (self.atoms - 1)
             support = torch.linspace(self.Vmin, self.Vmax, self.atoms).to(device)
 
@@ -199,14 +210,14 @@ class Agent(object):
         self.policy.eval()
         self.target.eval()
 
-    def step(self, step, env, m_obs, m_inv, test=False):
+    def step(self, step, env, m_obs, m_inv, m_compass, test=False):
         TD_step = 2
         _reward = 0
         frame = 0
         done = False
         m_reward = [0 for _ in range(10)]
         m_action = [torch.tensor([0]) for _ in range(10)]
-        state = [state_to(m_obs[-3:]) for _ in range(10)]
+        state = [state_to(m_obs[-3:], m_compass[-3:]) for _ in range(10)]
         while (not done) and frame < step:
             action_num = self.get_action(state[-1], test)
             obs, rew, done, info, t = envstep(env, action_num)
@@ -216,6 +227,7 @@ class Agent(object):
             for i in range(9):
                 m_obs[i] = m_obs[i+1]
                 m_inv[i] = m_inv[i+1]
+                m_compass[i] = m_compass[i+1] 
                 state[i] = state[i+1]
                 m_reward[i] = m_reward[i+1]
                 m_action[i] = m_action[i+1]
@@ -224,7 +236,8 @@ class Agent(object):
             if not done :
                 m_obs[-1] = np2torch(obs['pov'])
                 m_inv[-1] = obs['inventory']
-                state[-1] = state_to(m_obs[-3:])
+                m_compass[-1] = get_compass(obs)
+                state[-1] = state_to(m_obs[-3:], m_compass[-3:])
                 m_reward[-1] = rew
                 m_action[-1] = torch.tensor([action_num])
 
@@ -300,10 +313,24 @@ def np2torch(s):
     state = torch.from_numpy(s.copy())
     return state.to(dtype=torch.float, device=device)
 
-def state_to(pov):
-    state = torch.cat(pov, 2)
-    state = state.permute(2, 0, 1)
-    return state.to(torch.device('cpu'))
+def state_to(pov: list, compass: list):
+    ## compass 
+    compass = [torch.tensor([c]) for c in compass] 
+    compass = torch.cat(compass, 0)
+    ## compass in [-180, 180], normalize...
+    compass = compass/180. 
+    ## pov 
+    pov = torch.cat(pov, 2)
+    pov = pov.permute(2, 0, 1)
+    ## to cpu 
+    pov = pov.to(torch.device('cpu')) 
+    compass = compass.to(torch.device('cpu')) 
+    ## format 
+    state = {
+            'pov': pov, 
+            'compass': compass
+            } 
+    return state 
 
 def envstep(env, action_num):
     reward = 0
@@ -314,6 +341,17 @@ def envstep(env, action_num):
         if done or action_num == 3 or action_num == 4:
             return obs, reward, done, info, i+1
     return obs, reward, done, info, 4
+
+def get_compass(obs): 
+    'Compass is buggy, throwing `None` at random.'
+    compass = obs.get('compassAngle') 
+    if compass is None: 
+        compass = 0. ## TODO verify 0. is a good value--consider last observered 
+    elif type(compass) != float:
+        ## sometimes get np.array, depending on env 
+        compass = float(compass) 
+        pass
+    return compass
 
 def train(n_episodes):
     
@@ -348,11 +386,12 @@ def train(n_episodes):
         obs = env.reset()
         done = False
         ## simulate 
-        m_obs = [np2torch(obs['pov']) for _ in range(10)]
-        m_inv = [obs['inventory'] for _ in range(10)]
+        m_obs = [np2torch(obs['pov']) for _ in range(10)] 
+        m_inv = [obs['inventory'] for _ in range(10)] 
+        m_compass = [get_compass(obs) for _ in range(10)] 
         _reward = 0
         frame = 0
-        _reward, frame = agent1.step(20000, env, m_obs, m_inv)
+        _reward, frame = agent1.step(20000, env, m_obs, m_inv, m_compass)
 
         all_frame += frame
         if all_frame > 20000:
