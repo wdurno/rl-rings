@@ -26,7 +26,15 @@ if ai_image_tag is None:
 n_shards = os.environ.get('rl_hypothesis_2_n_parameter_server_shards') 
 if n_shards is None: 
     raise ValueError(FAIL+'Please set `rl_hypothesis_2_n_parameter_server_shards` environment variable!'+NC) 
-n_shards = int(n_shards) 
+n_shards = int(n_shards)
+n_gradient_calculators = os.environ.get('rl_hypothesis_2_n_gradient_calculators') 
+if n_gradient_calculators is None: 
+    raise ValueError(FAIL+'Please set `rl_hypothesis_2_n_gradient_calculators` environment variable!'+NC) 
+n_gradient_calculators = int(n_gradient_calculators) 
+n_simulators = os.environ.get('rl_hypothesis_2_n_simulators')
+if n_simulators is None: 
+    raise ValueError(FAIL+'Please set `rl_hypothesis_2_n_simulators` environment variable!'+NC) 
+n_simulators = int(n_simulators) 
 
 def run(cmd: str, stdin: str=None, os_system: bool=False):
     'Execute a string as a blocking, exception-raising system call'
@@ -232,7 +240,8 @@ def init_storage():
 def helm_deploy_simulation(): 
     cmd = f'helm upgrade simulation {repo_dir}/src/helm/simulation --install '+\
             f'--set docker_server=$(cat {repo_dir}/secret/acr/server) '+\
-            f'--set ai_image_tag="{ai_image_tag}"'
+            f'--set ai_image_tag="{ai_image_tag}" '+\
+            f'--set replicas="{n_simulators}"'
     run(cmd) 
     pass 
 
@@ -255,7 +264,8 @@ def helm_deploy_gradient_calculation():
     cmd = f'helm upgrade gradient-calculation {repo_dir}/src/helm/gradient-calculation --install '+\
             f'--set docker_server=$(cat {repo_dir}/secret/acr/server) '+\
             f'--set ai_image_tag="{ai_image_tag}" '+\
-            f'--set total_gradient_shards="{n_shards}"'
+            f'--set total_gradient_shards="{n_shards}" '+\
+            f'--set replicas="{n_gradient_calculators}"'
     run(cmd) 
     pass
 

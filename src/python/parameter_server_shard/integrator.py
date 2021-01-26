@@ -91,10 +91,13 @@ if __name__ == '__main__':
                         shard = parameter_shard.detach() 
                         shard_b64string = pack_shard(shard) 
                         ## write to cassandra 
+                        t0 = time() 
                         cc.insert_parameter_shard_b64(_uuid, shard_b64string) 
+                        parameter_shard_write_time = time() - t0 
                         ## register uuid with postgres  
                         pc.register_parameter_server_shard(_uuid, args.shard_index)
-                        print('parameter shard written, uuid: '+str(_uuid)+', shard id: '+str(args.shard_index)) 
+                        print('parameter shard written, uuid: '+str(_uuid)+', shard id: '+str(args.shard_index)+\
+                                ', write time: '+str(parameter_shard_write_time))
         except Exception as e: 
             traceback.print_exc() 
             print(e) 

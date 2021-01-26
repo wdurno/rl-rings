@@ -12,4 +12,6 @@ export rl_hypothesis_2_ephemeral_node_type="Standard_D2_v2"
 export rl_hypothesis_2_storage_nodes=3
 export rl_hypothesis_2_storage_node_type="Standard_A2M_v2"
 export rl_hypothesis_2_ai_image_tag="v0.0.2"
-export rl_hypothesis_2_n_parameter_server_shards="10" 
+export rl_hypothesis_2_n_parameter_server_shards="10"
+export rl_hypothesis_2_n_gradient_calculators=6
+export rl_hypothesis_2_n_simulators=2 
