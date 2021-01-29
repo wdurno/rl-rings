@@ -29,6 +29,7 @@ from cluster_config import ROLE, SIMULATION_ROLE, GRADIENT_CALCULATION_ROLE, \
         TOTAL_GRADIENT_SHARDS, PARAMETER_SERVER_ROLE
 
 ## constants 
+GAME = 'MineRLNavigateDense-v0' # TODO generalize 
 instance_id = uuid.uuid1().int >> 16 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 start_time = time.time()
@@ -153,7 +154,9 @@ class Agent(object):
         dist_pred.data.clamp_(0.001, 0.999)
         loss = - (dist_true * dist_pred.log()).sum(1).mean()
         grads = autograd.grad(loss, self.policy.parameters())
-        return grads 
+        with torch.no_grad(): 
+            q_pred = float((dist_pred * torch.linspace(self.Vmin, self.Vmax, self.atoms).to(device)).sum(1).mean()) 
+        return grads, float(loss), q_pred  
 
     def learn(self):
 
@@ -164,13 +167,10 @@ class Agent(object):
             return _loss, _Q_pred
 
         transitions = self.memory.sample(self.batch_size)
-        grads = self.get_grads(transitions) 
+        grads, _loss, _Q_pred = self.get_grads(transitions) 
         
         self.apply_grads(grads)
 
-        with torch.no_grad():
-            _loss = float(loss)
-            _Q_pred = float((dist_pred * torch.linspace(self.Vmin, self.Vmax, self.atoms).to(device)).sum(1).mean())
         return _loss, _Q_pred
 
     def apply_grads(self, grads): 
@@ -364,7 +364,7 @@ def get_compass(obs):
 
 def train(n_episodes):
     
-    minerl_mission = 'MineRLNavigateDense-v0'
+    minerl_mission = GAME
     print(minerl_mission)
     env = gym.make(minerl_mission) 
 
@@ -420,7 +420,7 @@ def train(n_episodes):
             print('epi %d all frame %d frame %5d Q %2.5f loss %2.5f reward %3d (%3.3f)'%\
                     (i_episode, all_frame, frame, Q, loss, _reward, np.mean(rew_all[-50:])))
         if ROLE == SIMULATION_ROLE:
-            pc.write_metrics(minerl_mission, current_model, _reward, frame) 
+            pc.write_sim_metrics(minerl_mission, current_model, _reward, frame) 
             print('epi %d all frame %d frame %5d reward %3d (%3.3f) avg_write_time: (%3.3f)'%\
                     (i_episode, all_frame, frame, _reward, np.mean(rew_all[-50:]), avg_write_time))
         pass
@@ -479,14 +479,15 @@ def __grad_iter(model_path: str, batch_size: int, transition_wait_time: int):
         time.sleep(transition_wait_time)
     else:
         ## calculate gradeints
-        grads = agent.get_grads(game_transitions)
+        grads, loss, q_pred = agent.get_grads(game_transitions)
         ## publish gradients
         grad_shards = shard_gradients(grads, TOTAL_GRADIENT_SHARDS) 
         t0 = time.time() 
         successful_writes = publish_grad_shards(grad_shards) 
         grad_shard_write_time = time.time() - t0 
         print('successfully wrote '+str(successful_writes)+' of '+str(TOTAL_GRADIENT_SHARDS)+\
-                ' shards, write time: '+str(grad_shard_write_time)+', sampling time: '+str(sample_time))
+                ' shards, write time: '+str(grad_shard_write_time)+', sampling time: '+str(sample_time)) 
+        pc.write_grad_metrics(GAME, model_path, loss, q_pred) 
     pass 
 
 def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publish_frequency: int=60): 
