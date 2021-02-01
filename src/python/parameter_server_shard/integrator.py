@@ -13,7 +13,8 @@ parser.add_argument('--shard-index', required=True, type=int)
 parser.add_argument('--learning-rate', required=False, type=float, default=1e-5) 
 
 grad_wait_time = 30 
-shard_write_time = 60 
+shard_write_time = 60
+grad_clip_value = 1.0 
 
 def init_local_db(wait_interval=10): 
     '''
@@ -76,7 +77,8 @@ if __name__ == '__main__':
                     print('integrating '+str(len(grad_shards))+' grad shard vectors...') 
                     ## update param's grad 
                     for g in grad_shards: 
-                        parameter_shard.grad = g 
+                        ## apply clipped grads 
+                        parameter_shard.grad = g.clamp(-grad_clip_value, grad_clip_value) 
                         opt.step() 
                     ## delete old grad shards from local cache 
                     local_pc.delete_grad_shards_before_timestamp(last_shard_read_time) 

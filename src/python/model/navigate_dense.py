@@ -29,7 +29,7 @@ from cluster_config import ROLE, SIMULATION_ROLE, GRADIENT_CALCULATION_ROLE, \
         TOTAL_GRADIENT_SHARDS, PARAMETER_SERVER_ROLE
 
 ## constants 
-GAME = 'MineRLNavigateDense-v0' # TODO generalize 
+GAME = 'MineRLNavigateDense-v0' # TODO generalize to other games  
 instance_id = uuid.uuid1().int >> 16 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 start_time = time.time()
