@@ -7,9 +7,12 @@ export rl_hypothesis_2_tenant_id=""
 
 ## defaults
 export rl_hypothesis_2_resource_group_name="rl_hypothesis_2_rg"
-export rl_hypothesis_2_ephemeral_nodes=22 
-export rl_hypothesis_2_ephemeral_node_type="Standard_D2_v2"
+export rl_hypothesis_2_ephemeral_nodes=48
+export rl_hypothesis_2_ephemeral_node_type="Standard_E2d_v4"
 export rl_hypothesis_2_storage_nodes=3
 export rl_hypothesis_2_storage_node_type="Standard_A2M_v2"
-export rl_hypothesis_2_ai_image_tag="v0.0.2"
-export rl_hypothesis_2_n_parameter_server_shards="10" 
+export rl_hypothesis_2_ai_image_tag="v0.0.1"
+export rl_hypothesis_2_n_parameter_server_shards="20"
+export rl_hypothesis_2_n_gradient_calculators=40
+export rl_hypothesis_2_n_simulators=4
+

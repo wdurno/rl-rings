@@ -63,18 +63,25 @@ class PostgresConnector(__StorageABC):
         '''
         sql1 = 'CREATE DATABASE structured;'
         sql2 = '''
-               CREATE TABLE metrics(
+               CREATE TABLE sim_metrics(
                    game TEXT, 
                    model TEXT,
                    reward FLOAT4,
                    frames INT4);
                ''' 
-        sql3 = 'CREATE TABLE transitions(transition_id UUID PRIMARY KEY);'
-        sql4 = 'CREATE TABLE grad_ids(grad_id UUID PRIMARY KEY, timestamp TIMESTAMP);'
-        sql5 = 'CREATE TABLE latest_model(model_id INT4 PRIMARY KEY, path TEXT);'
-        sql6 = "INSERT INTO latest_model VALUES (0, '');" 
-        sql7 = 'CREATE TABLE parameter_server_state(last_model_publish_time TIMESTAMP, last_grad_time TIMESTAMP);'
-        sql8 = 'CREATE TABLE parameter_server_shards(shard_id UUID PRIMARY KEY, shard_index INT4, timestamp TIMESTAMP);'
+        sql3 = '''
+               CREATE TABLE grad_metrics(
+                   game TEXT, 
+                   model TEXT, 
+                   loss FLOAT4, 
+                   q_pred FLOAT4); 
+               '''
+        sql4 = 'CREATE TABLE transitions(transition_id UUID PRIMARY KEY);'
+        sql5 = 'CREATE TABLE grad_ids(grad_id UUID PRIMARY KEY, timestamp TIMESTAMP);'
+        sql6 = 'CREATE TABLE latest_model(model_id INT4 PRIMARY KEY, path TEXT);'
+        sql7 = "INSERT INTO latest_model VALUES (0, '');" 
+        sql8 = 'CREATE TABLE parameter_server_state(last_model_publish_time TIMESTAMP, last_grad_time TIMESTAMP);'
+        sql9 = 'CREATE TABLE parameter_server_shards(shard_id UUID PRIMARY KEY, shard_index INT4, timestamp TIMESTAMP);'
         ## init DB requires special connection 
         self.connection = psycopg2.connect(user='postgres', host=self.url, port='5432', password=self.secret)
         self.connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
@@ -87,25 +94,44 @@ class PostgresConnector(__StorageABC):
         self.__exec(sql5, debug=True) 
         self.__exec(sql6, debug=True) 
         self.__exec(sql7, debug=True) 
-        self.__exec(sql8, debug=True)
+        self.__exec(sql8, debug=True) 
+        self.__exec(sql9, debug=True) 
         pass
 
-    def write_metrics(self, game: str, model: str, reward: float, frames: int):
+    def write_sim_metrics(self, game: str, model: str, reward: float, frames: int):
         'write simulation metrics to postgres'
-        sql = f"INSERT INTO metrics VALUES ('{game}', '{model}', {reward}, {frames});"
+        sql = f"INSERT INTO sim_metrics VALUES ('{game}', '{model}', {reward}, {frames});"
         self.__exec(sql)
         pass 
 
+    def write_grad_metrics(self, game: str, model: str, loss: float, q_pred: float): 
+        'write grad calc metrics to postgres'
+        sql = f"INSERT INTO grad_metrics VALUES ('{game}', '{model}', {loss}, {q_pred});"
+        self.__exec(sql) 
+        pass
+
     def get_metrics(self): 
-        'return metrics as dataframe' 
-        sql = 'SELECT * FROM metrics;'
-        rows = self.__exec(sql) 
-        ## build df 
+        'return metrics as a dict of dataframes' 
+        ## get sim metrics 
+        sql1 = 'SELECT * FROM sim_metrics;'
+        rows = self.__exec(sql1) 
+        ## build sim metrics df 
         game = [row[0] for row in rows] 
         model = [row[1] for row in rows] 
         reward = [row[2] for row in rows] 
         frames = [row[3] for row in rows] 
-        return pd.DataFrame({'game': game, 'model': model, 'reward': reward, 'frames': frames}) 
+        sim_metrics =  pd.DataFrame({'game': game, 'model': model, 'reward': reward, 'frames': frames}) 
+        ## get and build grad metrics 
+        sql2 = 'SELECT * FROM grad_metrics;' 
+        rows = self.__exec(sql2) 
+        game = [row[0] for row in rows] 
+        model = [row[1] for row in rows] 
+        loss = [row[2] for row in rows] 
+        q_pred = [row[3] for row in rows] 
+        grad_metrics = pd.DataFrame({'game': game, 'model': model, 'loss': loss, 'q_pred': q_pred}) 
+        ## combine DFs 
+        data_frames = {'sim_metrics': sim_metrics, 'grad_metrics': grad_metrics} 
+        return data_frames 
 
     def write_transition_id(self, _uuid):
         'write a transition uuid to postgres'

@@ -29,6 +29,7 @@ from cluster_config import ROLE, SIMULATION_ROLE, GRADIENT_CALCULATION_ROLE, \
         TOTAL_GRADIENT_SHARDS, PARAMETER_SERVER_ROLE
 
 ## constants 
+GAME = 'MineRLNavigateDense-v0' # TODO generalize to other games  
 instance_id = uuid.uuid1().int >> 16 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 start_time = time.time()
@@ -153,7 +154,9 @@ class Agent(object):
         dist_pred.data.clamp_(0.001, 0.999)
         loss = - (dist_true * dist_pred.log()).sum(1).mean()
         grads = autograd.grad(loss, self.policy.parameters())
-        return grads 
+        with torch.no_grad(): 
+            q_pred = float((dist_pred * torch.linspace(self.Vmin, self.Vmax, self.atoms).to(device)).sum(1).mean()) 
+        return grads, float(loss), q_pred  
 
     def learn(self):
 
@@ -164,13 +167,10 @@ class Agent(object):
             return _loss, _Q_pred
 
         transitions = self.memory.sample(self.batch_size)
-        grads = self.get_grads(transitions) 
+        grads, _loss, _Q_pred = self.get_grads(transitions) 
         
         self.apply_grads(grads)
 
-        with torch.no_grad():
-            _loss = float(loss)
-            _Q_pred = float((dist_pred * torch.linspace(self.Vmin, self.Vmax, self.atoms).to(device)).sum(1).mean())
         return _loss, _Q_pred
 
     def apply_grads(self, grads): 
@@ -218,6 +218,7 @@ class Agent(object):
         m_reward = [0 for _ in range(10)]
         m_action = [torch.tensor([0]) for _ in range(10)]
         state = [state_to(m_obs[-3:], m_compass[-3:]) for _ in range(10)]
+        write_times = [] 
         while (not done) and frame < step:
             action_num = self.get_action(state[-1], test)
             obs, rew, done, info, t = envstep(env, action_num)
@@ -252,11 +253,16 @@ class Agent(object):
                 important = reward > 0.001
                 if frame >= TD_step and reward < 2.1:
                     game_transition = ([state[-TD_step-1], m_action[-TD_step], state[-1], reward, _done, gam], important) 
+                    t0 = time.time() 
                     if ROLE == SINGLE_NODE_ROLE:
                         self.memory.push(*game_transition)
                     if ROLE == SIMULATION_ROLE:
                         ## upload to cassandra 
                         upload_transition(game_transition[0]) ## dropping importance  
+                        pass
+                    write_times.append(time.time()-t0)
+                    pass
+                pass
 
             if done and not test:
                 for i in range(TD_step-1):
@@ -269,17 +275,20 @@ class Agent(object):
                     gam = torch.tensor([gam])
                     important = frame < 17900
                     game_transition = ([state[-TD_step+i], m_action[-TD_step+i+1], state[-1], reward, _done, gam], important) 
+                    t0 = time.time() 
                     if ROLE == SINGLE_NODE_ROLE: 
                         self.memory.push(*game_transition) 
                     if ROLE == SIMULATION_ROLE:
                         ## upload to cassandra 
                         upload_transition(game_transition[0]) ## dropping importance  
-
-
+                        pass
+                    write_times.append(time.time()-t0)
+                    pass
+                pass
+            pass
         if not test:
-            return _reward, frame
-
-        return _reward, done
+            return _reward, frame, np.mean(write_times) 
+        return _reward, done, np.mean(write_times) 
 
 def action_to(num):
     act = {
@@ -355,7 +364,7 @@ def get_compass(obs):
 
 def train(n_episodes):
     
-    minerl_mission = 'MineRLNavigateDense-v0'
+    minerl_mission = GAME
     print(minerl_mission)
     env = gym.make(minerl_mission) 
 
@@ -374,8 +383,10 @@ def train(n_episodes):
             if path is not None: 
                 ## latest model obtained
                 current_model = path
+                t0 = time.time() 
                 agent1.load_model(path) 
-                print('loaded model: '+str(path)+'...') 
+                load_time = time.time() - t0
+                print('loaded model: '+str(path)+', load time: '+str(load_time)+'s...') 
         ## continue loop? 
         i_episode += 1 
         if n_episodes is not None: 
@@ -391,16 +402,16 @@ def train(n_episodes):
         m_compass = [get_compass(obs) for _ in range(10)] 
         _reward = 0
         frame = 0
-        _reward, frame = agent1.step(20000, env, m_obs, m_inv, m_compass)
+        _reward, frame, avg_write_time = agent1.step(20000, env, m_obs, m_inv, m_compass)
 
         all_frame += frame
         if all_frame > 20000:
-            time = frame // 20
+            ftime = frame // 20
         else:
-            time = 0
+            ftime = 0
         ## model fitting, if applicable 
         if ROLE == SINGLE_NODE_ROLE:
-            loss, Q = agent1.train_data(time)
+            loss, Q = agent1.train_data(ftime)
         agent1.update_epsilon(_reward)
         rew_all.append(_reward)
 
@@ -409,9 +420,9 @@ def train(n_episodes):
             print('epi %d all frame %d frame %5d Q %2.5f loss %2.5f reward %3d (%3.3f)'%\
                     (i_episode, all_frame, frame, Q, loss, _reward, np.mean(rew_all[-50:])))
         if ROLE == SIMULATION_ROLE:
-            pc.write_metrics(minerl_mission, current_model, _reward, frame) 
-            print('epi %d all frame %d frame %5d reward %3d (%3.3f)'%\
-                    (i_episode, all_frame, frame, _reward, np.mean(rew_all[-50:])))
+            pc.write_sim_metrics(minerl_mission, current_model, _reward, frame) 
+            print('epi %d all frame %d frame %5d reward %3d (%3.3f) avg_write_time: (%3.3f)'%\
+                    (i_episode, all_frame, frame, _reward, np.mean(rew_all[-50:]), avg_write_time))
         pass
 
     # reset rpm
@@ -436,11 +447,14 @@ def grad_server(batch_size=100, model_wait_time=30, transition_wait_time=30):
     #agent = Agent() 
     while True: 
         ## pull latest model 
-        model_path = get_latest_model()  
+        t0 = time.time() 
+        model_path = get_latest_model() 
+        model_load_time = time.time() - t0 
         if model_path is None: 
             print('No model found. Sleeping '+str(model_wait_time)+' seconds...') 
             time.sleep(model_wait_time) 
         else:
+            print('model load time: '+str(model_load_time)) 
             p = Process(target=__grad_iter, args=(model_path, batch_size, transition_wait_time,)) 
             p.start() 
             p.join()
@@ -457,18 +471,23 @@ def __grad_iter(model_path: str, batch_size: int, transition_wait_time: int):
     agent.load_model(model_path)
     agent.update_device()
     ## sample game transitions
-    game_transitions = sample_transitions(batch_size)
+    t0 = time.time() 
+    game_transitions = sample_transitions(batch_size) 
+    sample_time = time.time() - t0 
     if game_transitions is None:
         print('Sampled transition of length zero! Sleeping '+str(transition_wait_time)+' seconds...')
         time.sleep(transition_wait_time)
     else:
         ## calculate gradeints
-        grads = agent.get_grads(game_transitions)
+        grads, loss, q_pred = agent.get_grads(game_transitions)
         ## publish gradients
-        grad_shards = shard_gradients(grads, TOTAL_GRADIENT_SHARDS)
-        successful_writes = publish_grad_shards(grad_shards)
+        grad_shards = shard_gradients(grads, TOTAL_GRADIENT_SHARDS) 
+        t0 = time.time() 
+        successful_writes = publish_grad_shards(grad_shards) 
+        grad_shard_write_time = time.time() - t0 
         print('successfully wrote '+str(successful_writes)+' of '+str(TOTAL_GRADIENT_SHARDS)+\
-                ' shards')
+                ' shards, write time: '+str(grad_shard_write_time)+', sampling time: '+str(sample_time)) 
+        pc.write_grad_metrics(GAME, model_path, loss, q_pred) 
     pass 
 
 def parameter_server(model_name: str='model', grad_wait_time: int=60, model_publish_frequency: int=60): 
@@ -595,7 +614,10 @@ def parameter_shard_combiner(publish_attempt_wait_time=90, model_name:str='model
     ## forever publish new models 
     while True: 
         ## attempt to get grads 
+        t0 = time.time() 
         shards = get_all_latest_parameter_shards() 
+        parameter_shard_read_time = time.time() - t0 
+        print('parameter shard read time: '+str(parameter_shard_read_time)) 
         parameters = agent.policy.parameters() 
         parameters = recombine_tensors_shards_into_parameters(shards, parameters) 
         now = datetime.now() 
@@ -606,7 +628,10 @@ def parameter_shard_combiner(publish_attempt_wait_time=90, model_name:str='model
             local_path = os.path.join('/models', path) ## TODO global variable, put in config 
             agent.save_model(local_path) 
             with open(local_path, 'rb') as f:
+                t0 = time.time() 
                 mc.set(path, f.read()) 
+                model_write_time = time.time() - t0 
+                print('model write time: '+str(model_write_time)) 
                 pass 
             pc.set_model_path(path) 
             ## update time 
