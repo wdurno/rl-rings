@@ -20,5 +20,4 @@ RUN apt-get update && \
 ## mixin patch 
 RUN rm /usr/local/lib/python3.8/dist-packages/minerl/env/Malmo/Minecraft/build.gradle 
 ADD mixin-patch/build.gradle /usr/local/lib/python3.8/dist-packages/minerl/env/Malmo/Minecraft/build.gradle 
-ADD mixin-patch/mixin-0.7.5-SNAPSHOT.jar /tmp/mixin-0.7.5-SNAPSHOT.jar 
 

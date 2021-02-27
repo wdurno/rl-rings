@@ -70,7 +70,8 @@ runClient {
 repositories {
     maven {
         name = "SpongePowered Repo"
-        url = "http://repo.spongepowered.org/maven/"
+        //url = "http://repo.spongepowered.org/maven/"
+	url = "https://repo.spongepowered.org/repository/maven-public/"
     }
     maven { url 'https://jitpack.io' }
 }
@@ -109,8 +110,8 @@ dependencies {
     // compile 'com.github.SpongePowered:Mixin:404f5da' // 0.7.5-SNAPSHOT
     // ^ mixin doesn't compile on jitpack, so we'll have to depend on the SNAPSHOT and build it manually for reprod
     //shade group: 'org.apache.commons', name: 'com.springsource.org.apache.commons.codec', version: '1.6.0'
-    //compile 'org.spongepowered:mixin:0.7.5-SNAPSHOT'
-    compile files('/tmp/mixin-0.7.5-SNAPSHOT.jar') 
+    compile 'org.spongepowered:mixin:0.7.5-SNAPSHOT'
+    //compile files('/tmp/mixin-0.7.5-SNAPSHOT.jar') 
 
 }
 
