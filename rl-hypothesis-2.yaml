@@ -1,0 +1,10 @@
+## Do not edit in-place 
+## Copy to $HOME and modify there 
+
+## required 
+subscription_id: ""
+tenant_id: ""
+
+##defaults 
+terraform_prefix: "horovodK8sPytorch" # alphanumeric characters only 
+image_name: "ai:v0.0.1"

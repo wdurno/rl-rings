@@ -1,6 +1,0 @@
-
-name: "simulation"
-docker_server: ""
-ai_image_tag: "" 
-replicas: 2
-

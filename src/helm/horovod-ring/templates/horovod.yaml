@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: horovod
+  labels:
+    app: horovod
+spec:
+  ports:
+  - port: 22
+    targetPort: 22
+  clusterIP: None
+  selector:
+    app: horovod
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: horovod
+spec:
+  selector:
+    matchLabels:
+      app: horovod 
+  serviceName: "horovod"
+  replicas: {{ .Values.replicas }} 
+  podManagementPolicy: "Parallel"
+  template:
+    metadata:
+      labels:
+        app: horovod 
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+      - name: horovod
+        image: "{{ .Values.image }}"
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        ports:
+        - containerPort: 22
+        imagePullPolicy: Always
+        command:
+          - "python3"
+          - "-u"
+          #- "/app/src/python/debug.py" 
+          - "/app/src/python/init.py"
+          - "--replicas={{ .Values.replicas }}"
+          - "--interactive-debugging-mode={{ .Values.interactive_debugging_mode }}"
+      imagePullSecrets:
+        - name: acr-creds

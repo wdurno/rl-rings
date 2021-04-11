@@ -1,4 +1,0 @@
-Flask
-waitress
-torch
-numpy 
