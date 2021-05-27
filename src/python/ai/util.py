@@ -105,7 +105,8 @@ def __split_tensor(tensor, n):
     return (tensor[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n)) 
 
 def shard_tensor_list(tensor_list, n_shards: int): 
-    'flatten tensors and break into `n_shards`'
+    '''DEPRECATED
+    flatten tensors and break into `n_shards`'''
     ## concat 
     flat_tensors = [] 
     for t in tensor_list: 
@@ -118,16 +119,19 @@ def shard_tensor_list(tensor_list, n_shards: int):
     return shards
 
 def shard_model_parameters(parameters, n_shards: int): 
-    'flatten parameter tensors and break into `n_shards`' 
+    '''DEPRECATED
+    flatten parameter tensors and break into `n_shards`''' 
     tensor_list = [p.detach() for p in parameters] 
     return shard_tensor_list(tensor_list, n_shards) 
 
 def shard_gradients(grads, n_shards: int): 
-    'flatten grads and break into `n_shards`'
+    '''DEPRECATED
+    flatten grads and break into `n_shards`'''
     return shard_tensor_list(grads, n_shards) 
 
 def publish_grad_shards(shards: list): 
-    'write to parameter shard servers'
+    '''DEPRECATED
+    write to parameter shard servers'''
     if isinstance(shards, types.GeneratorType): 
         shards = [shard for shard in shards]  
     n_shards = len(shards) 
@@ -156,18 +160,21 @@ def publish_grad_shards(shards: list):
     return len(responses) - len(failed_responses) 
 
 def pack_shard(shard_tensor): 
-    'tensor -> b64string'
+    '''DEPRECATED
+    tensor -> b64string'''
     np_array_bytes = shard_tensor.detach().numpy().tobytes() 
     b64string = base64.b64encode(np_array_bytes).decode()  
     return b64string 
 
 def unpack_shard_b64string(shard_b64string): 
-    'b64string -> tensor'
+    '''DEPRECATED
+    b64string -> tensor'''
     np_array_bytes = base64.b64decode(shard_b64string.encode()) 
     shard_tensor = torch.from_numpy(np.frombuffer(np_array_bytes, dtype=np.float32))
     return shard_tensor 
 
 def get_all_latest_parameter_shards(): 
+    'DEPRECATED'
     shard_uuids = pc.get_all_latest_parameter_server_shard_uuids() 
     shard_b64strings = cc.get_parameter_shard_b64strs(shard_uuids) 
     shards = [unpack_shard_b64string(b64str) for b64str in shard_b64strings] 
@@ -175,6 +182,7 @@ def get_all_latest_parameter_shards():
 
 def recombine_tensors_shards_into_parameters(tensor_shards, parameters: list): 
     '''
+    DEPRECATED
     Read through `flat_tensor` assigning values to each parameter.
     Assignment is in-place! 
     '''

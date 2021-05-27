@@ -2,6 +2,7 @@
 NUM_EPOCH = 50 
 BATCH_SIZE = 5000
 
+import gym 
 import torch
 import torchvision
 import torch.nn as nn
@@ -9,6 +10,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 from tqdm import tqdm_notebook as tqdm
 import horovod.torch as hvd
+
+## Initialize MineRL environment 
+env = gym.make("MineRLTreechop-v0") 
 
 ## Initialize Horovod
 hvd.init() 
@@ -94,8 +98,9 @@ optimizer = hvd.DistributedOptimizer(optimizer,
 hvd.broadcast_parameters(model.state_dict(), 
         root_rank=0) 
 
-##define train function
+## define train function
 def train(model, device, train_loader, optimizer, epoch, log_interval=10000):
+    'fit model on current data'
     model.train()
     tk0 = tqdm(train_loader, total=int(len(train_loader)), disable=True)
     counter = 0
@@ -111,8 +116,30 @@ def train(model, device, train_loader, optimizer, epoch, log_interval=10000):
         pass
     pass
 
-##define test function
+## define sample function 
+def sample(model, device, store_observations=True, max_iter=20000): 
+    'generate new data using latest model'
+    env.reset() 
+    iter_counter = 0 
+    done = False 
+    while not done: 
+        ## TODO use model to pick action 
+        obs, reward, done, _ = env.step(env.action_space.noop()) 
+        ## store observation 
+        ## TODO 
+        ## if game halted, reset 
+        if done:
+            env.reset() 
+        ## do not loop forever 
+        iter_counter += 1 
+        if iter_counter > max_iter:
+            done = True 
+        pass 
+    pass 
+
+## define test function
 def test(model, device, test_loader):
+    'evaluate model against test dataset'
     model.eval()
     test_loss = 0
     correct = 0
@@ -129,6 +156,9 @@ def test(model, device, test_loader):
         100. * correct / len(test_loader.dataset)))
     pass
 
-for epoch in range(1, NUM_EPOCH + 1):
+if __name__ == '__main__': 
+    for epoch in range(1, NUM_EPOCH + 1):
+        sample(model, device) 
         train(model, device, train_loader, optimizer, epoch)
         test(model, device, test_loader) 
+        ## TODO update model if pod_id == 0 
