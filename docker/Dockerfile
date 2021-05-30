@@ -7,7 +7,6 @@ ENV TENSORFLOW_VERSION=1.14.0 \
     TORCHVISION_VERSION=0.5.0 \
     MXNET_VERSION=1.6.0 \
     HOROVOD_VERSION=0.19.0 \
-    PYTHON_VERSION=${python} \
     DEBIAN_FRONTEND=noninteractive
 
 # Set default shell to /bin/bash
@@ -25,24 +24,23 @@ RUN echo "installing libraries..." && \
         ca-certificates \
         libjpeg-dev \
         libpng-dev \
-        python${PYTHON_VERSION} \
-        python${PYTHON_VERSION}-dev \
+	python3-pip \
         librdmacm1 \
         libibverbs1 \
         ibverbs-providers \
 	openjdk-8-jdk \
 	xvfb \
 	x11-xserver-utils \
-	python3-psycopg2 && \
+	python3-dev \
+	python3-psycopg2 \
+	python3-distutils && \
     echo "installing python and fundamental packages..." && \
-    if [[ "${PYTHON_VERSION}" == "3.6" ]]; then \
-        apt-get install -y python${PYTHON_VERSION}-distutils; \
-    fi && \
-    ln -s /usr/bin/python${PYTHON_VERSION} /usr/bin/python && \
-    curl -O https://bootstrap.pypa.io/get-pip.py && \
-    python get-pip.py && \
-    rm get-pip.py && \
+    ln -s /usr/bin/python3 /usr/bin/python && \
+    ln -s /usr/bin/pip3 /usr/bin/pip && \
+    pip install --upgrade pip && \
+    pip install setuptools && \
     pip install \
+	scikit-build \
         future \
 	typing \
 	numpy \
@@ -64,9 +62,11 @@ RUN echo "installing libraries..." && \
     make -j $(nproc) all && \
     make install && \
     ldconfig && \
-    rm -rf /tmp/openmpi && \
-    echo "installing horovod..." && \
-    HOROVOD_WITH_TENSORFLOW=0 HOROVOD_WITH_PYTORCH=1 HOROVOD_WITH_MXNET=0 \
+    rm -rf /tmp/openmpi  
+
+## pip needs a refresh 
+RUN echo "installing horovod..." && \
+    HOROVOD_WITH_PYTORCH=1 \
     pip install --no-cache-dir horovod==${HOROVOD_VERSION} && \
     echo "install ssh for mpi..." && \
     apt-get install -y --no-install-recommends openssh-client openssh-server && \
