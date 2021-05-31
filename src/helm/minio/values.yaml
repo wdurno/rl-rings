@@ -1,6 +1,6 @@
 
 # Number of MinIO containers running
-replicas: 4
+replicas: 2
 
 mode: distributed 
 

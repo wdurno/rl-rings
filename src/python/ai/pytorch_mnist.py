@@ -2,6 +2,7 @@
 NUM_EPOCH = 50 
 BATCH_SIZE = 5000
 
+import minerl 
 import gym 
 import torch
 import torchvision
@@ -10,6 +11,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from tqdm import tqdm_notebook as tqdm
 import horovod.torch as hvd
+from util import get_latest_model, upload_transition, sample_transitions 
 
 ## Initialize MineRL environment 
 env = gym.make("MineRLTreechop-v0") 
@@ -119,17 +121,21 @@ def train(model, device, train_loader, optimizer, epoch, log_interval=10000):
 ## define sample function 
 def sample(model, device, store_observations=True, max_iter=20000): 
     'generate new data using latest model'
-    env.reset() 
-    iter_counter = 0 
+    obs = env.reset() 
     done = False 
+    iter_counter = 0 
     while not done: 
+        ## shift transition 
+        obs_prev = obs 
         ## TODO use model to pick action 
-        obs, reward, done, _ = env.step(env.action_space.noop()) 
-        ## store observation 
-        ## TODO 
+        action = env.action_space.noop() 
+        obs, reward, done, _ = env.step(action) 
+        ## store transition  
+        transition = (obs_prev, action, obs, reward, done) 
+        upload_transition(transition) 
         ## if game halted, reset 
         if done:
-            env.reset() 
+            obs = env.reset() 
         ## do not loop forever 
         iter_counter += 1 
         if iter_counter > max_iter:

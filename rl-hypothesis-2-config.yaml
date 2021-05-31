@@ -8,3 +8,5 @@ tenant_id: ""
 ##defaults 
 terraform_prefix: "horovodK8sPytorch" # alphanumeric characters only 
 image_name: "ai:v0.0.1"
+horovod_instances: 3
+cassandra_instances: 3

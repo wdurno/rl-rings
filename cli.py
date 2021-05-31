@@ -13,6 +13,7 @@ parser.add_argument('--terraform-destroy', dest='terraform_destroy', action='sto
 parser.add_argument('--terraform-destroy-compute', dest='terraform_destroy_compute', action='store_true', \
         help='destroys nodes, retains resource group and acr') 
 parser.add_argument('--skip-terraform', dest='skip_terraform', action='store_true', help='skips all terraform build actions') 
+parser.add_argument('--update-horovod-src', dest='update_horovod_src', action='store_true', help='a debugging tool. Update horovod workers to local src. Just an update, no Terraform nor Docker commands.') 
 parser.add_argument('--interactive-debugging-mode', dest='interactive_debugging_mode', action='store_true', \
         help='sleeps horovod pods for easier debugging')
 args = parser.parse_args() 
@@ -29,7 +30,10 @@ from build.terraform import guarantee_phase_1_architecture, guarantee_phase_2_ar
         terraform_destroy_compute
 from build.secret import refresh_keys 
 from build.docker import docker_build 
-from build.horovod import deploy_horovod 
+from build.horovod import deploy_horovod, update_horovod_worker_src 
+from build.cassandra import cassandra_deploy
+from build.minio import minio_deploy 
+from build.postgres import postgres_deploy 
 
 ## parse config path 
 if args.config_path is None: 
@@ -42,6 +46,11 @@ with open(config_path, 'r') as f:
     args.config = yaml.safe_load(f) 
     args.config['interactive_debugging_mode'] = args.interactive_debugging_mode 
     pass
+
+if args.update_horovod_src:
+    update_horovod_worker_src(args.ROOT, args.config) 
+    exit(0) 
+    pass 
 
 if args.terraform_destroy_compute:
     terraform_destroy_compute(args.ROOT, args.config) 
@@ -71,4 +80,8 @@ if not args.skip_terraform:
     guarantee_phase_2_architecture(args.ROOT, args.config) 
     pass 
 
+## deploy all infrastructure 
 deploy_horovod(args.ROOT, args.config)
+cassandra_deploy(args.ROOT, args.config) 
+minio_deploy(args.ROOT, args.config) 
+postgres_deploy(args.ROOT, args.config) 
