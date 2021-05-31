@@ -34,6 +34,7 @@ from build.horovod import deploy_horovod, update_horovod_worker_src
 from build.cassandra import cassandra_deploy
 from build.minio import minio_deploy 
 from build.postgres import postgres_deploy 
+from build.util import init_storage 
 
 ## parse config path 
 if args.config_path is None: 
@@ -85,3 +86,4 @@ deploy_horovod(args.ROOT, args.config)
 cassandra_deploy(args.ROOT, args.config) 
 minio_deploy(args.ROOT, args.config) 
 postgres_deploy(args.ROOT, args.config) 
+init_storage(args.ROOT, args.config) 

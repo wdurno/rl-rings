@@ -2,7 +2,7 @@ from build.util import run
 import os
 import base64 
 
-def helm_deploy_postgres(root, conf):
+def postgres_deploy(root, conf):
     ## update local secret 
     postgres_secret = base64.urlsafe_b64encode(os.urandom(16)).decode() 
     with open(f'{root}/secret/postgres/postgres-secret', 'w') as f:

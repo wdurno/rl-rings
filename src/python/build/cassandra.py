@@ -1,6 +1,6 @@
 from build.util import run
 
-def deploy_cassandra(root, conf): 
+def cassandra_deploy(root, conf): 
     'deploys horovod'
     ## config 
     cassandra_instances = int(conf['cassandra_instances']) 

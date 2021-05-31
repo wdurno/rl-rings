@@ -1,6 +1,6 @@
 from build.util import run
 
-def helm_deploy_minio(root, conf): 
+def minio_deploy(root, conf): 
     ## install helm chart 
     cmd1 = f'helm repo add minio https://helm.min.io/'
     run(cmd1) 

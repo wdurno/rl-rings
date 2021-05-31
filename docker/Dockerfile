@@ -7,7 +7,8 @@ ENV TENSORFLOW_VERSION=1.14.0 \
     TORCHVISION_VERSION=0.5.0 \
     MXNET_VERSION=1.6.0 \
     HOROVOD_VERSION=0.19.0 \
-    DEBIAN_FRONTEND=noninteractive
+    DEBIAN_FRONTEND=noninteractive \
+    PYTHONPATH=/app/src/python 
 
 # Set default shell to /bin/bash
 SHELL ["/bin/bash", "-cu"]

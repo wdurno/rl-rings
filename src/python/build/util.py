@@ -1,4 +1,7 @@
 import os 
+import string 
+import jinja2
+import random
 from subprocess import Popen, PIPE 
 
 ## constants 
@@ -51,3 +54,28 @@ def run(cmd: str, stdin: str=None, os_system: bool=False, return_stdout=True):
         return stdout 
     pass
 
+def init_storage(root, config): 
+    ## get job template 
+    with open(f'{root}/src/k8s/init-storage-job.yaml', 'r') as f:
+        job_template = jinja2.Template(f.read()) 
+    ## get variable for template 
+    with open(f'{root}/secret/acr/server') as f: 
+        docker_server = f.read() 
+    ## generate random id 
+    rand_id = __random_str()  
+    ## ai image tag from config 
+    image_name = config['image_name']
+    ## populate 
+    job_yaml = job_template.render(docker_server=docker_server, rand_id=rand_id, image_name=image_name) 
+    ## apply 
+    cmd1 = 'kubectl apply -f -'
+    stdin = job_yaml.encode() 
+    run(cmd1, stdin=stdin) 
+    ## block until complete 
+    cmd2 = f'kubectl wait --timeout=-1s --for=condition=complete job/init-storage-{rand_id}' 
+    run(cmd2) 
+    pass 
+
+def __random_str(n_char=5): 
+    letters = string.ascii_lowercase 
+    return ''.join(random.choice(letters) for i in range(n_char))
