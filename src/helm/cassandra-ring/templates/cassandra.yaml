@@ -92,7 +92,7 @@ spec:
         - name: cassandra-data 
           emptyDir: {} ## I use emptyDir because I'm cheap 
       nodeSelector:
-        agentpool: ephemeral
+        agentpool: storage
       tolerations:
         - key: kubernetes.azure.com/scalesetpriority 
           operator: "Exists" 

@@ -32,11 +32,26 @@ variable "compute_pool_name" {
 
 variable "number_of_compute_nodes" { 
   type = number
-  default = 2
+  default = 3
 }
 
 variable "compute_node_type" { 
   type = string
   default = "Standard_F2S_v2"
 } 
+
+variable "storage_pool_name" {
+  type = string
+  default = "storage"
+}
+
+variable "number_of_storage_nodes" {
+  type = number
+  default = 4
+}
+
+variable "storage_node_type" {
+  type = string
+  default = "Standard_A2M_v2"
+}
 

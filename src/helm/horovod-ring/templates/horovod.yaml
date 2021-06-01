@@ -49,3 +49,5 @@ spec:
           - "--interactive-debugging-mode={{ .Values.interactive_debugging_mode }}"
       imagePullSecrets:
         - name: acr-creds
+      nodeSelector:
+        agentpool: compute
