@@ -94,7 +94,6 @@ def __get_base_var_str(config):
             f' -var="tenant_id={tenant_id}"'+\
             f' -var="resource_group_name={tf_prefix}rg"'+\
             f' -var="acr_name={tf_prefix}acr"'+\
-            f' -var="k8s_name={tf_prefix}k8s"'+\
-            f' -var="compute_pool_name=k8spool"'
+            f' -var="k8s_name={tf_prefix}k8s"'
     return base_var_str
 

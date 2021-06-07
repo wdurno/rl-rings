@@ -1,9 +1,12 @@
 
 # Number of MinIO containers running
-replicas: 2
+replicas: 4
 
 mode: distributed 
 
 nodeSelector:
   agentpool: storage 
 
+tolerations:
+  - key: kubernetes.azure.com/scalesetpriority
+    operator: "Exists"

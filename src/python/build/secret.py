@@ -6,7 +6,7 @@ def refresh_keys(root, conf):
     __get_kubeconfig(conf) 
     __get_acr_token(root, conf) 
     __get_acr_server(root, conf) 
-    __upload_acr_secret_to_k8s(root) 
+    __upload_acr_secret_to_k8s(root, conf) 
     pass 
 
 def __get_kubeconfig(conf):
@@ -47,7 +47,8 @@ def __get_acr_server(root, config):
         pass
     pass 
 
-def __upload_acr_secret_to_k8s(root): 
+def __upload_acr_secret_to_k8s(root, config):
+    tf_prefix = config['terraform_prefix'] 
     cmd1 = f'kubectl delete secret acr-creds'
     try:
         run(cmd1) 
@@ -56,7 +57,7 @@ def __upload_acr_secret_to_k8s(root):
         pass
     cmd2 = 'kubectl create secret docker-registry acr-creds '+\
         f'--docker-server=$(cat {root}/secret/acr/server) '+\
-        '--docker-username=horovodK8sPytorchacr '+\
+        f'--docker-username={tf_prefix}acr '+\
         f'--docker-password=$(cat {root}/secret/acr/token)'
     run(cmd2) 
     pass

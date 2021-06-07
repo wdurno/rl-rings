@@ -51,3 +51,6 @@ spec:
         - name: acr-creds
       nodeSelector:
         agentpool: compute
+      tolerations:
+        - key: kubernetes.azure.com/scalesetpriority
+          operator: "Exists"
