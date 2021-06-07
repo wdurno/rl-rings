@@ -43,8 +43,6 @@ class MinIOConnector(__StorageABC):
         connection = self.__get_connection() 
         connection.make_bucket('models') 
         print('MinIO bucket made: `models`') 
-        connection.make_bucket('gradients') 
-        print('MinIO bucket made: `gradients`') 
         pass
 
     def get(self, path, bucket='models'):
@@ -68,14 +66,5 @@ class MinIOConnector(__StorageABC):
         ## minio lib isn't very good at getting threads, so no parallelism 
         connection.put_object(bucket, path, io.BytesIO(blob), len(blob), num_parallel_uploads=1) 
         pass 
-
-    def set_gradient(self, _uuid, grad):
-        'DEPRECATED!'
-        self.set(str(_uuid), pack_obj(grad, out_bytes=True), bucket='gradients')
-        pass
-
-    def get_gradient(self, _uuid):
-        'DEPRECATED!'
-        return unpack_obj(self.get(str(_uuid), bucket='gradients'), in_bytes=True) 
     pass 
 
