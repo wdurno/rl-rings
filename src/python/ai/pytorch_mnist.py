@@ -9,9 +9,12 @@ import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.utils.data import Dataset 
 from tqdm import tqdm_notebook as tqdm
 import horovod.torch as hvd
-from util import get_latest_model, upload_transition, sample_transitions 
+
+from ai.util import get_latest_model, upload_transition, sample_transitions 
+from connectors import cc 
 
 ## Initialize MineRL environment 
 env = gym.make("MineRLTreechop-v0") 
@@ -162,9 +165,28 @@ def test(model, device, test_loader):
         100. * correct / len(test_loader.dataset)))
     pass
 
+def RLRingsDataset(Dataset):
+    'loads game transitions from Cassandra'
+    def __init__(self): 
+        self.__uuids = cc.get_all_game_transition_uuids() 
+        pass 
+
+    def __len__(self): 
+        return len(self.__uuids) 
+
+    def __getitem__(self, idx): 
+        return cc.get_game_transition(self.__uuids[idx]) 
+    pass 
+
+def refresh_datasets():
+    'Gets datasets with latest game transitions' 
+    ## TODO 
+    pass
+
 if __name__ == '__main__': 
     for epoch in range(1, NUM_EPOCH + 1):
-        sample(model, device) 
+        sample(model, device)
+        ## TODO model sync here to force cluster synchronization 
+        ## TODO refresh dataset 
         train(model, device, train_loader, optimizer, epoch)
         test(model, device, test_loader) 
-        ## TODO update model if pod_id == 0 

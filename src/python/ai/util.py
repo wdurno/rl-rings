@@ -6,12 +6,9 @@ import torch
 import os 
 import numpy as np 
 import base64 
-import grequests 
 
 ## constants 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
-
-from model.cluster_config import TOTAL_GRADIENT_SHARDS 
 
 def upload_transition(transition, retry_delay=60):
     continue_attempting = True 
