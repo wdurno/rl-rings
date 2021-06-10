@@ -30,7 +30,7 @@ def upload_metrics():
 
 def sample_transitions(n=100):
     '''
-    Randomly sample transitions, ready for `get_grads`.
+    Randomly sample transitions.
     Returns list of tensors if successful, otherwise `None`. 
     '''
     ## pull data from db 
@@ -40,33 +40,34 @@ def sample_transitions(n=100):
     if len(rows) == 0:
         return None 
     out = [] 
-    for col in range(6): 
+    for col in range(5): 
         ## first and third entries are dicts 
         if col in [0, 2]: 
-            out.append({'pov': [], 'compass': []}) 
+            #out.append({'pov': [], 'compass': []}) 
+            out.append({'pov': []})  
         else:
             out.append([]) 
             pass
         pass
     for row in rows:
-        for col in range(6): 
+        for col in range(5): 
             if col in [0, 2]: 
                 pov = row[col]['pov'] 
-                compass = row[col]['compass'] 
+                #compass = row[col]['compass'] 
                 out[col]['pov'].append(pov) 
-                out[col]['compass'].append(compass) 
+                #out[col]['compass'].append(compass) 
             else: 
                 out[col].append(row[col]) 
                 pass 
             pass
     ## convert to tensors 
-    for col in range(6): 
+    for col in range(5): 
         if col in [0, 2]:
             pov = out[col]['pov'] 
-            compass = out[col]['compass'] 
+            #compass = out[col]['compass'] 
             out[col] = {
                     'pov': torch.stack(tuple(pov)),
-                    'compass': torch.stack(tuple(compass)) 
+                    #'compass': torch.stack(tuple(compass)) 
                     } 
         else:
             tensor = torch.stack(tuple(out[col])) 

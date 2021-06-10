@@ -4,6 +4,7 @@ BATCH_SIZE = 5000
 
 import minerl 
 import gym 
+from random import shuffle 
 import torch
 import torchvision
 import torch.nn as nn
@@ -14,7 +15,6 @@ from tqdm import tqdm_notebook as tqdm
 import horovod.torch as hvd
 
 from ai.util import get_latest_model, upload_transition, sample_transitions 
-from connectors import cc 
 
 ## Initialize MineRL environment 
 env = gym.make("MineRLTreechop-v0") 
@@ -30,38 +30,38 @@ hvd.init()
 batch_size_train = 64 # We use a small batch size here for training
 batch_size_test = 1024 #
 
-# define how image transformed
-image_transform = torchvision.transforms.Compose([
-                               torchvision.transforms.ToTensor(),
-                               torchvision.transforms.Normalize(
-                                 (0.1307,), (0.3081,))
-                             ])
-#image datasets
-train_dataset = torchvision.datasets.MNIST('dataset/', 
-                                           train=True, 
-                                           download=True,
-                                           transform=image_transform)
-test_dataset = torchvision.datasets.MNIST('dataset/', 
-                                          train=False, 
-                                          download=True,
-                                          transform=image_transform)
-#data loaders
-#train_loader = torch.utils.data.DataLoader(train_dataset,
-#                                           batch_size=batch_size_train, 
-#                                           shuffle=True)
-
-train_sampler = torch.utils.data.distributed.DistributedSampler(
-        train_dataset,
-        num_replicas=hvd.size(),
-        rank=hvd.rank()) 
-
-train_loader = torch.utils.data.DataLoader(train_dataset, 
-        batch_size=BATCH_SIZE, 
-        sampler=train_sampler) 
-
-test_loader = torch.utils.data.DataLoader(test_dataset,
-                                          batch_size=batch_size_test, 
-                                          shuffle=True)
+## define how image transformed
+#image_transform = torchvision.transforms.Compose([
+#                               torchvision.transforms.ToTensor(),
+#                               torchvision.transforms.Normalize(
+#                                 (0.1307,), (0.3081,))
+#                             ])
+##image datasets
+#train_dataset = torchvision.datasets.MNIST('dataset/', 
+#                                           train=True, 
+#                                           download=True,
+#                                           transform=image_transform)
+#test_dataset = torchvision.datasets.MNIST('dataset/', 
+#                                          train=False, 
+#                                          download=True,
+#                                          transform=image_transform)
+##data loaders
+##train_loader = torch.utils.data.DataLoader(train_dataset,
+##                                           batch_size=batch_size_train, 
+##                                           shuffle=True)
+#
+#train_sampler = torch.utils.data.distributed.DistributedSampler(
+#        train_dataset,
+#        num_replicas=hvd.size(),
+#        rank=hvd.rank()) 
+#
+#train_loader = torch.utils.data.DataLoader(train_dataset, 
+#        batch_size=BATCH_SIZE, 
+#        sampler=train_sampler) 
+#
+#test_loader = torch.utils.data.DataLoader(test_dataset,
+#                                          batch_size=batch_size_test, 
+#                                          shuffle=True)
 
 class CNN(nn.Module):
     def __init__(self):
@@ -165,28 +165,23 @@ def test(model, device, test_loader):
         100. * correct / len(test_loader.dataset)))
     pass
 
-def RLRingsDataset(Dataset):
-    'loads game transitions from Cassandra'
-    def __init__(self): 
-        self.__uuids = cc.get_all_game_transition_uuids() 
+def RLRingsDataset(Dataset): ## may note be needed 
+    'randomly samples transitions from Cassandra'
+    def __init__(self, n): 
+        self.__transitions = sample_transitions(n)  
         pass 
 
     def __len__(self): 
-        return len(self.__uuids) 
+        return len(self.__transitions) 
 
     def __getitem__(self, idx): 
-        return cc.get_game_transition(self.__uuids[idx]) 
+        return self.__transitions[idx] 
     pass 
-
-def refresh_datasets():
-    'Gets datasets with latest game transitions' 
-    ## TODO 
-    pass
 
 if __name__ == '__main__': 
     for epoch in range(1, NUM_EPOCH + 1):
         sample(model, device)
-        ## TODO model sync here to force cluster synchronization 
-        ## TODO refresh dataset 
+        train_data_batch = RLRingsDataset(batch_size_train) 
+        test_data_batch = RLRingsDataset(batch_size_test) 
         train(model, device, train_loader, optimizer, epoch)
         test(model, device, test_loader) 

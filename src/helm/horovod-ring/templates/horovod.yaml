@@ -37,6 +37,21 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
+          - name: MINIO_ACCESSKEY
+            valueFrom:
+              secretKeyRef:
+                name: minio
+                key: accesskey
+          - name: MINIO_SECRETKEY
+            valueFrom:
+              secretKeyRef:
+                name: minio
+                key: secretkey
+          - name: POSTGRES_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: postgres
+                key: postgres-secret
         ports:
         - containerPort: 22
         imagePullPolicy: Always

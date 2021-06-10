@@ -20,9 +20,9 @@ def deploy_horovod(root, conf):
 def update_horovod_worker_src(root, conf):
     'updates horovod worker src directory'
     horovod_instances = int(conf['horovod_instances']) 
-    for worker_idx in rand(horovod_instances): 
+    for worker_idx in range(horovod_instances): 
         ## delete remote src 
-        cmd1 = f'kubectl exec -it horovod-{worder_idx} -- rm -rf /app/src'
+        cmd1 = f'kubectl exec -it horovod-{worker_idx} -- rm -rf /app/src'
         run(cmd1, os_system=True) 
         ## copy local src to remote 
         cmd2 = f'kubectl cp {root}/src horovod-{worker_idx}:/app/src'
