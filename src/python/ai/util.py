@@ -1,4 +1,5 @@
 from connectors import mc, cc, pc
+from collections import OrderedDict 
 from time import sleep
 import requests 
 import types 
@@ -66,7 +67,7 @@ def sample_transitions(n=100):
             pov = out[col]['pov'] 
             #compass = out[col]['compass'] 
             out[col] = {
-                    'pov': torch.stack(tuple(pov)),
+                    'pov': torch.stack(tuple(torch.from_numpy(pov))),
                     #'compass': torch.stack(tuple(compass)) 
                     } 
         else:
@@ -95,4 +96,25 @@ def get_latest_model(models_dir='/models'):
     ## write to local disk 
     with open(local_path, 'wb') as f: 
         f.write(model_blob) 
-    return local_path 
+    return local_path
+
+def __game_state_to_tensor(state: OrderedDict):
+    ## only pov exists for now 
+    ## more will be added with more games 
+    return state['pov'] 
+
+def __vec_to_game_action(vec: np.ndarray): 
+    'vec entries assumed in {0, 1}, only one can equal 1.'
+    ## more logic will be added as further games are integrated 
+    return {
+            'attack': 1, 
+            'forward': 1, 
+            'back': int(vec[0] > .5), 
+            'camera': np.array([0., -30.*int(vec[1] > .5)  + 30.*int(vec[2] > .5)]), 
+            'left': int(vec[3] > .5), 
+            'right': int(vec[4] > .5), 
+            'jump': int(vec[5] > .5), 
+            'sneak': 0, 
+            'sprint': 0 
+            }
+

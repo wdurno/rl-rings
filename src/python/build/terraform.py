@@ -58,7 +58,8 @@ def __copy_phase_2_tf_files(root):
     pass
 
 def __delete_compute_tf_files(root):
-    cmd = f'rm {root}/terraform_state/k8s.tf {root}/terraform_state/compute_pool.tf'
+    cmd = f'rm {root}/terraform_state/k8s.tf {root}/terraform_state/compute_pool.tf '+\
+            f'rm {root}/terraform_state/storage_pool.tf'
     try: 
         run(cmd) 
     except Exception as e: 
