@@ -1,6 +1,8 @@
 
 NUM_EPOCH = 50 
 BATCH_SIZE = 5000
+batch_size_train = 64 
+batch_size_test = 1024 
 
 import minerl 
 import gym 
@@ -20,47 +22,6 @@ env = gym.make("MineRLTreechop-v0")
 
 ## Initialize Horovod
 hvd.init() 
-
-## Create dataloader, in PyTorch, we feed the trainer data with use of dataloader
-## We create dataloader with dataset from torchvision, 
-## and we dont have to download it seperately, all automatically done
-
-# Define batch size, batch size is how much data you feed for training in one iteration
-batch_size_train = 64 # We use a small batch size here for training
-batch_size_test = 1024 #
-
-## define how image transformed
-#image_transform = torchvision.transforms.Compose([
-#                               torchvision.transforms.ToTensor(),
-#                               torchvision.transforms.Normalize(
-#                                 (0.1307,), (0.3081,))
-#                             ])
-##image datasets
-#train_dataset = torchvision.datasets.MNIST('dataset/', 
-#                                           train=True, 
-#                                           download=True,
-#                                           transform=image_transform)
-#test_dataset = torchvision.datasets.MNIST('dataset/', 
-#                                          train=False, 
-#                                          download=True,
-#                                          transform=image_transform)
-##data loaders
-##train_loader = torch.utils.data.DataLoader(train_dataset,
-##                                           batch_size=batch_size_train, 
-##                                           shuffle=True)
-#
-#train_sampler = torch.utils.data.distributed.DistributedSampler(
-#        train_dataset,
-#        num_replicas=hvd.size(),
-#        rank=hvd.rank()) 
-#
-#train_loader = torch.utils.data.DataLoader(train_dataset, 
-#        batch_size=BATCH_SIZE, 
-#        sampler=train_sampler) 
-#
-#test_loader = torch.utils.data.DataLoader(test_dataset,
-#                                          batch_size=batch_size_test, 
-#                                          shuffle=True)
 
 class CNN(nn.Module):
     def __init__(self):
@@ -118,6 +79,7 @@ def train(model, device, optimizer, n_iter=100, discount=.99):
 ## define sample function 
 def sample(model, device, max_iter=20000): 
     'generate new data using latest model'
+    model.eval() 
     obs = env.reset() 
     done = False 
     iter_counter = 0 
@@ -168,6 +130,9 @@ def __loss(model, device, transition, discount=.99):
     obs.to(device) 
     reward = reward.to(device) 
     done = done.to(device) 
+    ## torch channels different from tensorflow, permute required 
+    obs_prev = obs_prev.permute(0, 3, 1, 2)/255. 
+    obs = obs.permute(0, 3, 1, 2)/255. 
     ## calculate loss 
     pred_prev, pred = model(obs_prev), model(obs) 
     pred_prev_reward = pred_prev.gather(1, action) 
@@ -178,7 +143,5 @@ def __loss(model, device, transition, discount=.99):
 if __name__ == '__main__': 
     for epoch in range(1, NUM_EPOCH + 1):
         sample(model, device)
-        train_data_batch = RLRingsDataset(batch_size_train) 
-        test_data_batch = RLRingsDataset(batch_size_test) 
         train(model, device, train_loader, optimizer, epoch)
         test(model, device, test_loader) 
