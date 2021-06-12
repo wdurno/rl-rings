@@ -67,12 +67,12 @@ def sample_transitions(n=100):
             pov = out[col]['pov'] 
             #compass = out[col]['compass'] 
             out[col] = {
-                    'pov': torch.stack(tuple(torch.from_numpy(pov))),
+                    'pov': torch.from_numpy(np.stack(pov)),
                     #'compass': torch.stack(tuple(compass)) 
                     } 
+            out[col] = out[col]['pov'] ## logic complicate asfeeds are added 
         else:
-            tensor = torch.stack(tuple(out[col])) 
-            out[col] = tensor.to(device) 
+            out[col] = torch.from_numpy(np.stack(out[col])) 
             pass 
     return out 
 
@@ -108,12 +108,12 @@ def __vec_to_game_action(vec: np.ndarray):
     ## more logic will be added as further games are integrated 
     return {
             'attack': 1, 
-            'forward': 1, 
-            'back': int(vec[0] > .5), 
-            'camera': np.array([0., -30.*int(vec[1] > .5)  + 30.*int(vec[2] > .5)]), 
-            'left': int(vec[3] > .5), 
-            'right': int(vec[4] > .5), 
-            'jump': int(vec[5] > .5), 
+            'forward': int(vec[0] > .5), 
+            'back': int(vec[1] > .5), 
+            'camera': np.array([0., -30.*int(vec[2] > .5)  + 30.*int(vec[3] > .5)]), 
+            'left': int(vec[4] > .5), 
+            'right': int(vec[5] > .5), 
+            'jump': int(vec[6] > .5), 
             'sneak': 0, 
             'sprint': 0 
             }

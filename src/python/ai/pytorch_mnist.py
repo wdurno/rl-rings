@@ -11,7 +11,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import Dataset 
-from tqdm import tqdm_notebook as tqdm
 import horovod.torch as hvd
 
 from ai.util import get_latest_model, upload_transition, sample_transitions 
@@ -67,14 +66,14 @@ class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
         #input channel 1, output channel 10
-        self.conv1 = nn.Conv2d(1, 10, kernel_size=5, stride=1)
+        self.conv1 = nn.Conv2d(3, 10, kernel_size=5, stride=1)
         #input channel 10, output channel 20
         self.conv2 = nn.Conv2d(10, 20, kernel_size=5, stride=1)
         #dropout layer
         self.conv2_drop = nn.Dropout2d()
         #fully connected layer
         self.fc1 = nn.Linear(320, 50)
-        self.fc2 = nn.Linear(50, 10)
+        self.fc2 = nn.Linear(50, 7)
     def forward(self, x):
         x = self.conv1(x)
         x = F.max_pool2d(x, 2)
@@ -88,7 +87,7 @@ class CNN(nn.Module):
         x = F.relu(x)
         x = F.dropout(x)
         x = self.fc2(x)
-        return F.log_softmax(x, dim=1)
+        return x 
 
 ## create model and optimizer
 learning_rate = 0.01
@@ -104,25 +103,20 @@ hvd.broadcast_parameters(model.state_dict(),
         root_rank=0) 
 
 ## define train function
-def train(model, device, train_loader, optimizer, epoch, log_interval=10000):
+def train(model, device, optimizer, n_iter=100, discount=.99):
     'fit model on current data'
     model.train()
-    tk0 = tqdm(train_loader, total=int(len(train_loader)), disable=True)
-    counter = 0
-    for batch_idx, (data, target) in enumerate(tk0):
-        data, target = data.to(device), target.to(device)
+    for _ in range(n_iter):
+        transition = sample_transitions(batch_size_train) 
         optimizer.zero_grad()
-        output = model(data)
-        loss = F.nll_loss(output, target)
+        loss = __loss(model, device, transition, discount=discount) 
         loss.backward()
         optimizer.step()
-        counter += 1
-        #tk0.set_postfix(loss=(loss.item()*data.size(0) / (counter * train_loader.batch_size)))
         pass
     pass
 
 ## define sample function 
-def sample(model, device, store_observations=True, max_iter=20000): 
+def sample(model, device, max_iter=20000): 
     'generate new data using latest model'
     obs = env.reset() 
     done = False 
@@ -133,8 +127,9 @@ def sample(model, device, store_observations=True, max_iter=20000):
         ## TODO use model to pick action 
         action = env.action_space.noop() 
         obs, reward, done, _ = env.step(action) 
+        action = 0 
         ## store transition  
-        transition = (obs_prev, action, obs, reward, done) 
+        transition = (obs_prev, action, obs, reward, int(done)) 
         upload_transition(transition) 
         ## if game halted, reset 
         if done:
@@ -165,18 +160,20 @@ def test(model, device, test_loader):
         100. * correct / len(test_loader.dataset)))
     pass
 
-def RLRingsDataset(Dataset): ## may note be needed 
-    'randomly samples transitions from Cassandra'
-    def __init__(self, n): 
-        self.__transitions = sample_transitions(n)  
-        pass 
-
-    def __len__(self): 
-        return len(self.__transitions) 
-
-    def __getitem__(self, idx): 
-        return self.__transitions[idx] 
-    pass 
+def __loss(model, device, transition, discount=.99): 
+    ## load tensors 
+    obs_prev, action, obs, reward, done = transition 
+    obs_prev = obs_prev.to(device) 
+    action = action.to(device) 
+    obs.to(device) 
+    reward = reward.to(device) 
+    done = done.to(device) 
+    ## calculate loss 
+    pred_prev, pred = model(obs_prev), model(obs) 
+    pred_prev_reward = pred_prev.gather(1, action) 
+    pred_reward, _ = pred.max(dim=1) 
+    err = pred_prev_reward - ((1 - done)*discount*pred_reward + reward) 
+    return (err*err).mean() 
 
 if __name__ == '__main__': 
     for epoch in range(1, NUM_EPOCH + 1):
