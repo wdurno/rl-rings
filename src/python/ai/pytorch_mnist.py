@@ -27,9 +27,9 @@ class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
         #input channel 1, output channel 10
-        self.conv1 = nn.Conv2d(3, 10, kernel_size=5, stride=1)
+        self.conv1 = nn.Conv2d(3, 10, kernel_size=5, stride=2)
         #input channel 10, output channel 20
-        self.conv2 = nn.Conv2d(10, 20, kernel_size=5, stride=1)
+        self.conv2 = nn.Conv2d(10, 20, kernel_size=5, stride=2)
         #dropout layer
         self.conv2_drop = nn.Dropout2d()
         #fully connected layer
@@ -43,7 +43,7 @@ class CNN(nn.Module):
         x = self.conv2_drop(x)
         x = F.max_pool2d(x, 2)
         x = F.relu(x)
-        x = x.view(-1, 320)
+        x = x.view(-1, 20*3*3)
         x = self.fc1(x)
         x = F.relu(x)
         x = F.dropout(x)
