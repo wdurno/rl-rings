@@ -37,7 +37,7 @@ variable "number_of_compute_nodes" {
 
 variable "compute_node_type" { 
   type = string
-  default = "Standard_E2A_v2"
+  default = "standard_e2a_v4"
 } 
 
 variable "storage_pool_name" {

@@ -105,7 +105,7 @@ def sample(model, device, max_iter=20000):
     pass 
 
 ## define test function
-def test(model, device, test_loader, batch_size=batch_size_test, n_iter=10):
+def test(model, device, batch_size=batch_size_test, n_iter=10):
     'evaluate model against test dataset'
     model.eval() 
     losses = [] 
@@ -154,7 +154,7 @@ if __name__ == '__main__':
     t0 = time() 
     for epoch in range(1, NUM_EPOCH + 1):
         sample(model, device)
-        train(model, device, train_loader, optimizer, epoch)
-        loss = test(model, device, test_loader) 
+        train(model, device, optimizer)
+        loss = test(model, device) 
         t1 = time() - t0 
         print(f'dt: {t1}, epoch {epoch} of {NUM_EPOCH}, loss: {loss}') 
