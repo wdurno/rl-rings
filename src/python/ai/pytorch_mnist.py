@@ -2,11 +2,13 @@
 NUM_EPOCH = 50 
 BATCH_SIZE = 5000
 batch_size_train = 64 
-batch_size_test = 1024 
+batch_size_test = 128 
 
 import minerl 
 import gym 
+import numpy as np
 from random import shuffle 
+from time import time 
 import torch
 import torchvision
 import torch.nn as nn
@@ -15,7 +17,7 @@ import torch.optim as optim
 from torch.utils.data import Dataset 
 import horovod.torch as hvd
 
-from ai.util import get_latest_model, upload_transition, sample_transitions 
+from ai.util import upload_transition, sample_transitions, __int_to_game_action 
 
 ## Initialize MineRL environment 
 env = gym.make("MineRLTreechop-v0") 
@@ -33,7 +35,7 @@ class CNN(nn.Module):
         #dropout layer
         self.conv2_drop = nn.Dropout2d()
         #fully connected layer
-        self.fc1 = nn.Linear(320, 50)
+        self.fc1 = nn.Linear(20*3*3, 50) # 20*3*3 = 180 
         self.fc2 = nn.Linear(50, 7)
     def forward(self, x):
         x = self.conv1(x)
@@ -64,17 +66,18 @@ hvd.broadcast_parameters(model.state_dict(),
         root_rank=0) 
 
 ## define train function
-def train(model, device, optimizer, n_iter=100, discount=.99):
+def train(model, device, optimizer, n_iter=100, discount=.99, \
+        batch_size=batch_size_train):
     'fit model on current data'
     model.train()
     for _ in range(n_iter):
-        transition = sample_transitions(batch_size_train) 
+        transitions = sample_transitions(batch_size) 
         optimizer.zero_grad()
-        loss = __loss(model, device, transition, discount=discount) 
+        loss = __loss(model, device, transitions, discount=discount) 
         loss.backward()
         optimizer.step()
         pass
-    pass
+    return float(loss)  
 
 ## define sample function 
 def sample(model, device, max_iter=20000): 
@@ -86,12 +89,10 @@ def sample(model, device, max_iter=20000):
     while not done: 
         ## shift transition 
         obs_prev = obs 
-        ## TODO use model to pick action 
-        action = env.action_space.noop() 
-        obs, reward, done, _ = env.step(action) 
-        action = 0 
+        action_int, action_dict = __get_action(model, obs_prev, device) 
+        obs, reward, done, _ = env.step(action_dict) 
         ## store transition  
-        transition = (obs_prev, action, obs, reward, int(done)) 
+        transition = (obs_prev, action_int, obs, reward, int(done)) 
         upload_transition(transition) 
         ## if game halted, reset 
         if done:
@@ -104,23 +105,15 @@ def sample(model, device, max_iter=20000):
     pass 
 
 ## define test function
-def test(model, device, test_loader):
+def test(model, device, test_loader, batch_size=batch_size_test, n_iter=10):
     'evaluate model against test dataset'
-    model.eval()
-    test_loss = 0
-    correct = 0
-    with torch.no_grad():
-        for data, target in test_loader:
-            data, target = data.to(device), target.to(device)
-            output = model(data)
-            test_loss += F.nll_loss(output, target, reduction='sum').item() # sum up batch loss
-            pred = output.argmax(dim=1, keepdim=True) # get the index of the max log-probability
-            correct += pred.eq(target.view_as(pred)).sum().item()
-    test_loss /= len(test_loader.dataset)
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-        test_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset)))
-    pass
+    model.eval() 
+    losses = [] 
+    for _ in range(n_iter): 
+        transitions = sample_transitions(batch_size) 
+        loss = __loss(model, device, transitions, discount=discount) 
+        losses.append(float(loss)) 
+    return np.mean(losses) 
 
 def __loss(model, device, transition, discount=.99): 
     ## load tensors 
@@ -130,9 +123,10 @@ def __loss(model, device, transition, discount=.99):
     obs.to(device) 
     reward = reward.to(device) 
     done = done.to(device) 
-    ## torch channels different from tensorflow, permute required 
-    obs_prev = obs_prev.permute(0, 3, 1, 2)/255. 
-    obs = obs.permute(0, 3, 1, 2)/255. 
+    ## shaping data  
+    obs_prev = obs_prev.permute(0, 3, 1, 2)/255.-.5 # torch has channels up-front  
+    obs = obs.permute(0, 3, 1, 2)/255.-.5 
+    action = action.reshape(-1, 1) # gather requires same dimensions 
     ## calculate loss 
     pred_prev, pred = model(obs_prev), model(obs) 
     pred_prev_reward = pred_prev.gather(1, action) 
@@ -140,8 +134,27 @@ def __loss(model, device, transition, discount=.99):
     err = pred_prev_reward - ((1 - done)*discount*pred_reward + reward) 
     return (err*err).mean() 
 
+def __get_action(model, single_obs, device): 
+    '''translate model predictions to actions
+    outputs:
+     - action_int: compact representation, for storage 
+     - action_dict: for use by gym 
+    '''
+    ## format observation 
+    pov = torch.from_numpy(single_obs['pov']).to(device) 
+    pov = pov.reshape(1, 64, 64, 3)  
+    pov = pov.permute(0, 3, 1, 2)/255.-.5 
+    ## get action 
+    pred_reward = model(pov) 
+    action_int = int(torch.argmax(pred_reward, 1)[0]) 
+    action_dict = __int_to_game_action(action_int)  
+    return action_int, action_dict 
+
 if __name__ == '__main__': 
+    t0 = time() 
     for epoch in range(1, NUM_EPOCH + 1):
         sample(model, device)
         train(model, device, train_loader, optimizer, epoch)
-        test(model, device, test_loader) 
+        loss = test(model, device, test_loader) 
+        t1 = time() - t0 
+        print(f'dt: {t1}, epoch {epoch} of {NUM_EPOCH}, loss: {loss}') 

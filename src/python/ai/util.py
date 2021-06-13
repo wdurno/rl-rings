@@ -103,17 +103,17 @@ def __game_state_to_tensor(state: OrderedDict):
     ## more will be added with more games 
     return state['pov'] 
 
-def __vec_to_game_action(vec: np.ndarray): 
-    'vec entries assumed in {0, 1}, only one can equal 1.'
+def __int_to_game_action(action: int): 
+    'action integer to dictionary for gym usage'
     ## more logic will be added as further games are integrated 
     return {
             'attack': 1, 
-            'forward': int(vec[0] > .5), 
-            'back': int(vec[1] > .5), 
-            'camera': np.array([0., -30.*int(vec[2] > .5)  + 30.*int(vec[3] > .5)]), 
-            'left': int(vec[4] > .5), 
-            'right': int(vec[5] > .5), 
-            'jump': int(vec[6] > .5), 
+            'forward': int(action == 0), 
+            'back': int(action == 1), 
+            'camera': np.array([0., -30.*int(action == 2)  + 30.*int(action == 3)]), 
+            'left': int(action == 4), 
+            'right': int(action == 5), 
+            'jump': int(action == 6), 
             'sneak': 0, 
             'sprint': 0 
             }
