@@ -105,7 +105,7 @@ def sample(model, device, max_iter=20000):
     pass 
 
 ## define test function
-def test(model, device, batch_size=batch_size_test, n_iter=10):
+def test(model, device, batch_size=batch_size_test, n_iter=10, discount=.99):
     'evaluate model against test dataset'
     model.eval() 
     losses = [] 
