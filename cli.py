@@ -13,9 +13,12 @@ parser.add_argument('--terraform-destroy', dest='terraform_destroy', action='sto
 parser.add_argument('--terraform-destroy-compute', dest='terraform_destroy_compute', action='store_true', \
         help='destroys nodes, retains resource group and acr') 
 parser.add_argument('--skip-terraform', dest='skip_terraform', action='store_true', help='skips all terraform build actions') 
-parser.add_argument('--update-horovod-src', dest='update_horovod_src', action='store_true', help='a debugging tool. Update horovod workers to local src. Just an update, no Terraform nor Docker commands.') 
+parser.add_argument('--update-horovod-src', dest='update_horovod_src', action='store_true', \
+        help='a debugging tool. Update horovod workers to local src. Just an update, no Terraform nor Docker commands.') 
 parser.add_argument('--interactive-debugging-mode', dest='interactive_debugging_mode', action='store_true', \
-        help='sleeps horovod pods for easier debugging')
+        help='sleeps horovod pods for easier debugging') 
+parser.add_argument('--do-not-helm-install', dest='do_not_helm_install', action='store_true', help='does not install horovod workers, nor sets up storage') 
+parser.add_argument('--do-not-run-horovod', dest='do_not_run_horovod', action='store_true', help='allows for setup without running') 
 args = parser.parse_args() 
 
 ## constants 
@@ -34,7 +37,7 @@ from build.horovod import deploy_horovod, update_horovod_worker_src
 from build.cassandra import cassandra_deploy
 from build.minio import minio_deploy 
 from build.postgres import postgres_deploy 
-from build.util import init_storage 
+from build.util import init_storage, run_horovod 
 
 ## parse config path 
 if args.config_path is None: 
@@ -81,9 +84,16 @@ if not args.skip_terraform:
     guarantee_phase_2_architecture(args.ROOT, args.config) 
     pass 
 
-## deploy all infrastructure 
-deploy_horovod(args.ROOT, args.config)
-cassandra_deploy(args.ROOT, args.config) 
-minio_deploy(args.ROOT, args.config) 
-postgres_deploy(args.ROOT, args.config) 
-init_storage(args.ROOT, args.config) 
+if not args.do_not_helm_install:
+    ## deploy all infrastructure 
+    deploy_horovod(args.ROOT, args.config)
+    cassandra_deploy(args.ROOT, args.config) 
+    minio_deploy(args.ROOT, args.config) 
+    postgres_deploy(args.ROOT, args.config) 
+    init_storage(args.ROOT, args.config) 
+    pass 
+
+if not args.do_not_run_horovod: 
+    job_id = run_horovod(args.ROOT, args.config) 
+    print(f'horovod job id: {job_id}') 
+    pass 

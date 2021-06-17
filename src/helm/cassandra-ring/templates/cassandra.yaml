@@ -88,11 +88,17 @@ spec:
         volumeMounts:
         - name: cassandra-data
           mountPath: /cassandra_data
-      volumes: 
-        - name: cassandra-data 
-          emptyDir: {} ## I use emptyDir because I'm cheap 
       nodeSelector:
         agentpool: storage
       tolerations:
         - key: kubernetes.azure.com/scalesetpriority 
           operator: "Exists" 
+  volumeClaimTemplates:
+  - metadata:
+      name: cassandra-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "default"
+      resources:
+        requests:
+          storage: 100Gi

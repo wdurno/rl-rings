@@ -1,10 +1,12 @@
 import argparse
 import os
 from time import sleep
+from build.util import run 
 
 parser = argparse.ArgumentParser(description='initialize horovod pods') 
 parser.add_argument('--replicas', dest='replicas', required=True, help='number of MPI (Horovod) worker pods') 
 parser.add_argument('--interactive-debugging-mode', dest='interactive_debugging_mode', default=False, help='put this pod to sleep for easier debugging') 
+parser.add_argument('--is-head-node', dest='is_head_node', default=False, action='store_true', help='designates node as a head node') 
 args = parser.parse_args()
 args.replicas = int(args.replicas) 
 if args.interactive_debugging_mode in [True, 'True', 'true']:
@@ -55,6 +57,20 @@ if __name__ == '__main__':
         interactive_debugging_mode()
         pass
     
+    if args.is_head_node:
+        ## construct cmd 
+        cmd = f'horovodrun -np {args.replicas} -H '
+        for idx in range(args.replicas): 
+            if idx > 0:
+                cmd += ','
+                pass 
+            cmd += f'horovod-{idx}' 
+            pass 
+        cmd += ' xvfb-run python /app/src/python/ai/ai.py'
+        ## execute 
+        run(cmd, os_system=True) 
+        pass 
+
     ## check for master 
     pod_name = os.environ.get('POD_NAME') 
     print(f'POD_NAME: {pod_name}') 

@@ -59,14 +59,16 @@ def init_storage(root, config):
     with open(f'{root}/src/k8s/init-storage-job.yaml', 'r') as f:
         job_template = jinja2.Template(f.read()) 
     ## get variable for template 
-    with open(f'{root}/secret/acr/server') as f: 
+    with open(f'{root}/secret/acr/server', 'r') as f: 
         docker_server = f.read() 
     ## generate random id 
     rand_id = __random_str()  
     ## ai image tag from config 
     image_name = config['image_name']
     ## populate 
-    job_yaml = job_template.render(docker_server=docker_server, rand_id=rand_id, image_name=image_name) 
+    job_yaml = job_template.render(docker_server=docker_server, \
+            rand_id=rand_id, \
+            image_name=image_name) 
     ## apply 
     cmd1 = 'kubectl apply -f -'
     stdin = job_yaml.encode() 
@@ -75,6 +77,33 @@ def init_storage(root, config):
     cmd2 = f'kubectl wait --timeout=-1s --for=condition=complete job/init-storage-{rand_id}' 
     run(cmd2) 
     pass 
+
+def run_horovod(root, config):
+    ## get args 
+    replicas = int(config['horovod_instances']) 
+    interactive_debugging_mode = config['interactive_debugging_mode']
+    ## get job templates 
+    with open(f'{root}/src/k8s/horovod-job.yaml', 'r') as f: 
+        job_template = jinja2.Template(f.read()) 
+    ## get variable for template 
+    with open(f'{root}/secret/acr/server', 'r') as f:
+        docker_server = f.read() 
+    ## generate random id 
+    rand_id = __random_str() 
+    ## ai image tag from config 
+    image_name = config['image_name'] 
+    ## populate 
+    job_yaml = job_template.render(docker_server=docker_server, \
+            rand_id=rand_id, \
+            image_name=image_name, \
+            replicas=replicas, \
+            interactive_debugging_mode=interactive_debugging_mode) 
+    ## apply 
+    cmd1 = 'kubectl apply -f -' 
+    stdin = job_yaml.encode() 
+    run(cmd1, stdin=stdin) 
+    job_id = f'horovod-job-{rand_id}'
+    return job_id  
 
 def __random_str(n_char=5): 
     letters = string.ascii_lowercase 

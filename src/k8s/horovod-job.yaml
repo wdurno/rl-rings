@@ -1,0 +1,43 @@
+## Curious why I'm not using Helm hooks?
+## It's because I don't feel like editing 
+## MinIO's chart. 
+apiVersion: batch/v1
+kind: Job
+metadata:
+    name: horovod-job-{{ rand_id }} 
+    labels:
+      name: horovod-job-{{ rand_id }} 
+spec: 
+  backoffLimit: 1 
+  template: 
+    spec:
+      containers:
+        - name: horovod-job
+          image: {{ docker_server }}/{{ image_name }} 
+          env:
+            - name: MINIO_ACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio
+                  key: accesskey
+            - name: MINIO_SECRETKEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio
+                  key: secretkey
+            - name: POSTGRES_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: postgres-secret
+          command: 
+            - "python3"
+            - "-u"
+            - "/app/src/python/init.py"
+            - "--replicas={{ replicas }}"
+            - "--interactive-debugging-mode={{ interactive_debugging_mode }}"
+            - "--is-head-node"
+          imagePullPolicy: Always
+      imagePullSecrets:
+        - name: acr-creds
+      restartPolicy: Never 
