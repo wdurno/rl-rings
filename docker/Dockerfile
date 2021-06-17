@@ -50,6 +50,7 @@ RUN echo "installing libraries..." && \
 	gym \
 	minerl \
 	minio \
+	Jinja2 \
 	cassandra-driver \
 	pandas && \
     pip install torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} && \

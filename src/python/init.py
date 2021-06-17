@@ -64,7 +64,7 @@ if __name__ == '__main__':
             if idx > 0:
                 cmd += ','
                 pass 
-            cmd += f'horovod-{idx}' 
+            cmd += f'horovod-{idx}:1' 
             pass 
         cmd += ' xvfb-run python /app/src/python/ai/ai.py'
         ## execute 
