@@ -1,4 +1,8 @@
 
+#### v0.2.0
+
+Use horovod as distributed optimizer
+
 #### v0.1.4 
 
 Compass feature added
