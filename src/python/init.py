@@ -2,6 +2,7 @@ import argparse
 import os
 from time import sleep
 from build.util import run 
+import requests
 
 parser = argparse.ArgumentParser(description='initialize horovod pods') 
 parser.add_argument('--replicas', dest='replicas', required=True, help='number of MPI (Horovod) worker pods') 
@@ -45,6 +46,26 @@ Host horovod-{idx}
 
 '''
 
+def wait_for_dns(replicas): 
+    urls = [f'http://horovod-{idx}.horovod:22' for idx in range(replicas)] 
+    while True:
+        ready = True 
+        for url in urls:
+            try:
+                _ = requests.get(url) 
+            except Exception as e:
+                if 'SSH' not in str(e): 
+                    ## successful connection results in SSH rejecting non-secure request 
+                    ready = False 
+                    pass
+                pass
+            pass
+        if ready:
+            return ready 
+        print('dns not ready, sleeping 30 seconds...') 
+        sleep(30) 
+    pass 
+
 if __name__ == '__main__':
     ## write ssh host aliases
     ## without this, ssh cannot resolve full host names
@@ -58,15 +79,16 @@ if __name__ == '__main__':
         pass
     
     if args.is_head_node:
+        wait_for_dns(args.replicas) 
         ## construct cmd 
         cmd = f'horovodrun -np {args.replicas} -H '
         for idx in range(args.replicas): 
             if idx > 0:
                 cmd += ','
                 pass 
-            cmd += f'horovod-{idx}:1' 
+            cmd += f'horovod-{idx}.horovod:1' 
             pass 
-        cmd += ' xvfb-run python /app/src/python/ai/ai.py'
+        cmd += ' xvfb-run python /app/src/python/ai/ai_runner.py'
         ## execute 
         run(cmd, os_system=True) 
         pass 

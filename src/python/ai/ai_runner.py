@@ -86,11 +86,13 @@ def sample(model, device, max_iter=20000):
     obs = env.reset() 
     done = False 
     iter_counter = 0 
+    total_reward = 0. 
     while not done: 
         ## shift transition 
         obs_prev = obs 
         action_int, action_dict = __get_action(model, obs_prev, device) 
         obs, reward, done, _ = env.step(action_dict) 
+        total_reward += reward 
         ## store transition  
         transition = (obs_prev, action_int, obs, reward, int(done)) 
         upload_transition(transition) 
@@ -102,7 +104,8 @@ def sample(model, device, max_iter=20000):
         if iter_counter > max_iter:
             done = True 
         pass 
-    pass 
+    reward_rate = total_reward / iter_counter
+    return reward_rate 
 
 ## define test function
 def test(model, device, batch_size=batch_size_test, n_iter=10, discount=.99):
@@ -153,8 +156,8 @@ def __get_action(model, single_obs, device):
 if __name__ == '__main__': 
     t0 = time() 
     for epoch in range(1, NUM_EPOCH + 1):
-        sample(model, device)
+        reward_rate = sample(model, device)
         train(model, device, optimizer)
         loss = test(model, device) 
         t1 = time() - t0 
-        print(f'dt: {t1}, epoch {epoch} of {NUM_EPOCH}, loss: {loss}') 
+        print(f'dt: {t1}, epoch {epoch} of {NUM_EPOCH}, loss: {loss}, reward_rate: {reward_rate}') 
