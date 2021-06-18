@@ -47,6 +47,9 @@ spec:
               subPath: postgres
       nodeSelector:         
         agentpool: storage 
+      tolerations:
+        - key: kubernetes.azure.com/scalesetpriority
+          operator: "Exists"
   volumeClaimTemplates:
   - metadata:
       name: pgdata

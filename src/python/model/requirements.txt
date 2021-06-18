@@ -1,9 +1,0 @@
-torch
-torchvision
-numpy
-scipy
-matplotlib
-gym
-minerl
-tensorboard
-grequests 

@@ -7,3 +7,6 @@ mode: distributed
 nodeSelector:
   agentpool: storage 
 
+tolerations:
+  - key: kubernetes.azure.com/scalesetpriority
+    operator: "Exists"

@@ -22,8 +22,3 @@ bash build.sh --clean-up
 
 ![arch1](notes/images/rl2-arch1.png)
 
-## Notes
-
-- Wondering why `terraform/` and `helm/` are in `src/`?  Given the maturity of *infrastructure-as-code*, I see no reason burden myself with separating my *dev* and *ops*. For me, *intrstructure-is-code*. 
-- Special thanks to [`shadowyzy`](https://github.com/shadowyzy) for posting MineRL deep learning code, available [here](https://github.com/shadowyzy/NIPS2019-MineRL-Competition-solution). This code served as my initial model design. Discovering decent model code is very time consuming, so has accelerated my work. 
-

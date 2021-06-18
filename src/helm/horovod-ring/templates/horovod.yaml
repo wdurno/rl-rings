@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: horovod
+  labels:
+    app: horovod
+spec:
+  ports:
+  - port: 22
+    targetPort: 22
+  clusterIP: None
+  selector:
+    app: horovod
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: horovod
+spec:
+  selector:
+    matchLabels:
+      app: horovod 
+  serviceName: "horovod"
+  replicas: {{ .Values.replicas }} 
+  podManagementPolicy: "Parallel"
+  template:
+    metadata:
+      labels:
+        app: horovod 
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+      - name: horovod
+        image: "{{ .Values.image }}"
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: MINIO_ACCESSKEY
+            valueFrom:
+              secretKeyRef:
+                name: minio
+                key: accesskey
+          - name: MINIO_SECRETKEY
+            valueFrom:
+              secretKeyRef:
+                name: minio
+                key: secretkey
+          - name: POSTGRES_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: postgres
+                key: postgres-secret
+        ports:
+        - containerPort: 22
+        imagePullPolicy: Always
+        command:
+          - "python3"
+          - "-u"
+          #- "/app/src/python/debug.py" 
+          - "/app/src/python/init.py"
+          - "--replicas={{ .Values.replicas }}"
+          - "--interactive-debugging-mode={{ .Values.interactive_debugging_mode }}"
+        resources:
+          requests:
+            cpu: "1500m"
+            memory: "5Gi"
+      imagePullSecrets:
+        - name: acr-creds
+      nodeSelector:
+        agentpool: compute
+      tolerations:
+        - key: kubernetes.azure.com/scalesetpriority
+          operator: "Exists"
