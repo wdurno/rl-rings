@@ -1,6 +1,7 @@
 from connectors import mc, cc, pc
 from collections import OrderedDict 
-from time import sleep
+from time import time, sleep
+from io import BytesIO 
 import requests 
 import types 
 import torch 
@@ -97,6 +98,20 @@ def get_latest_model(models_dir='/models'):
     with open(local_path, 'wb') as f: 
         f.write(model_blob) 
     return local_path
+
+def write_latest_model(model, models_dir='/models'): 
+    ## save model to bytes 
+    b = BytesIO() 
+    torch.save(model.state_dict(), b) 
+    b.seek(0) 
+    model_bytes = b.read() 
+    b.close() 
+    ## write to minio 
+    model_name = 'model-'+str(int(time()))+'.pt' 
+    mc.set(model_name, model_bytes) 
+    ## update latest 
+    pc.set_model_path(model_name) 
+    return model_name  
 
 def __game_state_to_tensor(state: OrderedDict):
     ## only pov exists for now 

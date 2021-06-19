@@ -4,6 +4,7 @@ BATCH_SIZE = 5000
 batch_size_train = 64 
 batch_size_test = 128 
 
+import os 
 import minerl 
 import gym 
 import numpy as np
@@ -24,6 +25,8 @@ env = gym.make("MineRLTreechop-v0")
 
 ## Initialize Horovod
 hvd.init() 
+
+POD_NAME = os.getenv('POD_NAME', 'horovod-?') 
 
 class CNN(nn.Module):
     def __init__(self):
@@ -85,9 +88,8 @@ def sample(model, device, max_iter=20000):
     model.eval() 
     obs = env.reset() 
     done = False 
-    iter_counter = 0 
     total_reward = 0. 
-    while not done: 
+    for _ in range(max_iter): 
         ## shift transition 
         obs_prev = obs 
         action_int, action_dict = __get_action(model, obs_prev, device) 
@@ -99,12 +101,9 @@ def sample(model, device, max_iter=20000):
         ## if game halted, reset 
         if done:
             obs = env.reset() 
-        ## do not loop forever 
-        iter_counter += 1 
-        if iter_counter > max_iter:
-            done = True 
+            done = False 
         pass 
-    reward_rate = total_reward / iter_counter
+    reward_rate = total_reward / max_iter
     return reward_rate 
 
 ## define test function
@@ -156,8 +155,14 @@ def __get_action(model, single_obs, device):
 if __name__ == '__main__': 
     t0 = time() 
     for epoch in range(1, NUM_EPOCH + 1):
-        reward_rate = sample(model, device)
-        train(model, device, optimizer)
+        reward_rate = sample(model, device) 
+        t1 = time() - t0 
+        print(f'{POD_NAME}: dt: {t1}, reward_rate: {reward_rate}') 
+        train(model, device, optimizer) 
+        t1 = time() - t0
+        print(f'{POD_NAME}: dt: {t1}, fitting iteration complete')
         loss = test(model, device) 
         t1 = time() - t0 
-        print(f'dt: {t1}, epoch {epoch} of {NUM_EPOCH}, loss: {loss}, reward_rate: {reward_rate}') 
+        print(f'{POD_NAME}: dt: {t1}, epoch {epoch} of {NUM_EPOCH}, loss: {loss}') 
+        if POD_NAME == 'horovod-0': 
+            write_latest_model(model) 

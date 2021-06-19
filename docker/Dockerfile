@@ -32,6 +32,8 @@ RUN echo "installing libraries..." && \
 	openjdk-8-jdk \
 	xvfb \
 	x11-xserver-utils \
+	fluxbox \
+	x11vnc \
 	python3-dev \
 	python3-psycopg2 \
 	python3-distutils && \
@@ -64,7 +66,9 @@ RUN echo "installing libraries..." && \
     make -j $(nproc) all && \
     make install && \
     ldconfig && \
-    rm -rf /tmp/openmpi  
+    rm -rf /tmp/openmpi && \
+    echo "writing X11 cookie for secure screen sharing..." && \
+    openssl rand -hex 32 > /root/.Xauthority 
 
 ## pip needs a refresh 
 RUN echo "installing horovod..." && \

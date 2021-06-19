@@ -1,36 +1,36 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: horovod
+  name: viewer
   labels:
-    app: horovod
+    app: viewer
 spec:
   ports:
-  - port: 22
-    targetPort: 22
-  clusterIP: None
+  - port: 5900
+    targetPort: 5900
+  type: LoadBalancer 
   selector:
-    app: horovod
+    app: viewer
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: horovod
+  name: viewer
 spec:
   selector:
     matchLabels:
-      app: horovod 
-  serviceName: "horovod"
-  replicas: {{ .Values.replicas }} 
+      app: viewer 
+  serviceName: "viewer"
+  replicas: 1 
   podManagementPolicy: "Parallel"
   template:
     metadata:
       labels:
-        app: horovod 
+        app: viewer 
     spec:
       terminationGracePeriodSeconds: 1
       containers:
-      - name: horovod
+      - name: viewer
         image: "{{ .Values.image }}"
         env:
           - name: POD_NAME
@@ -52,16 +52,13 @@ spec:
               secretKeyRef:
                 name: postgres
                 key: postgres-secret
+          - name: DISPLAY 
+            value: ":99"
         ports:
-        - containerPort: 22
+        - containerPort: 5900
         imagePullPolicy: Always
         command:
-          - "python3"
-          - "-u"
-          #- "/app/src/python/debug.py" 
-          - "/app/src/python/init.py"
-          - "--replicas={{ .Values.replicas }}"
-          - "--interactive-debugging-mode={{ .Values.interactive_debugging_mode }}"
+          - "/app/src/scripts/viewer-entrypoint.sh"
         resources:
           requests:
             cpu: "1500m"
