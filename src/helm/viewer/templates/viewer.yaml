@@ -59,6 +59,9 @@ spec:
         imagePullPolicy: Always
         command:
           - "/app/src/scripts/viewer-entrypoint.sh"
+          #- "python"
+          #- "-u"
+          #- "/app/src/python/debug.py"
         resources:
           requests:
             cpu: "1500m"
