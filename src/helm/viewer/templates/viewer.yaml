@@ -58,6 +58,7 @@ spec:
         - containerPort: 5900
         imagePullPolicy: Always
         command:
+          - "bash" 
           - "/app/src/scripts/viewer-entrypoint.sh"
           #- "python"
           #- "-u"
