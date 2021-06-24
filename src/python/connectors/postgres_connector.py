@@ -70,6 +70,8 @@ class PostgresConnector(__StorageABC):
                    frames INT4);
                ''' 
         sql3 = 'CREATE TABLE transitions(transition_id UUID PRIMARY KEY);'
+        sql4 = 'CREATE TABLE latest_model(model_id INT4 PRIMARY KEY, path TEXT);'
+        sql5 = "INSERT INTO latest_model VALUES (0, '');" 
         ## init DB requires special connection 
         self.connection = psycopg2.connect(user='postgres', host=self.url, port='5432', password=self.secret)
         self.connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
@@ -78,6 +80,8 @@ class PostgresConnector(__StorageABC):
         ## normal requests with normal connections 
         self.__exec(sql2, debug=True) 
         self.__exec(sql3, debug=True) 
+        self.__exec(sql4, debug=True) 
+        self.__exec(sql5, debug=True) 
         pass
 
     def write_sim_metrics(self, game: str, model: str, reward: float, frames: int):
