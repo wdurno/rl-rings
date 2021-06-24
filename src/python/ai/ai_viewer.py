@@ -1,4 +1,5 @@
 import sys 
+import tty 
 import torch 
 from ai.ai_runner import model, device, sample, env
 from ai.util import get_latest_model, upload_transition, __int_to_game_action  
@@ -7,6 +8,7 @@ import argparse
 parser = argparse.ArgumentParser(description='Run a viewable environment') 
 parser.add_argument('--interactive-mode', dest='interactive_mode', action='store_true', default=False, \
         help='manually control the session.') 
+args = parser.parse_args()
 
 def non_interactive_mode():
     while True: 
@@ -26,6 +28,7 @@ def non_interactive_mode():
 def interactive_mode(max_action_val: int=6):
     print(__help) 
     obs = env.reset() 
+    total_reward = 0.
     while True: 
         ## get action 
         key = __wait_for_key() 
@@ -72,6 +75,7 @@ def __wait_for_key():
 
 if __name__ == '__main__': 
     if args.interactive_mode:
+        tty.setcbreak(sys.stdin.fileno()) ## read individual bytes from stdin without EOFs
         interactive_mode(6) # 0-6 
     else:
         non_interactive_mode() 
