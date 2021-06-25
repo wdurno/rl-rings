@@ -125,10 +125,11 @@ def __int_to_game_action(action: int):
             'attack': 1, 
             'forward': int(action == 0), 
             'back': int(action == 1), 
-            'camera': np.array([0., -30.*int(action == 2)  + 30.*int(action == 3)]), 
-            'left': int(action == 4), 
-            'right': int(action == 5), 
-            'jump': int(action == 6), 
+            'camera': np.array([30.*int(action == 2) - 30.*int(action == 3), \
+                    -30.*int(action == 4) + 30.*int(action == 5)]), 
+            'left': int(action == 6), 
+            'right': int(action == 7), 
+            'jump': int(action == 8), 
             'sneak': 0, 
             'sprint': 0 
             }

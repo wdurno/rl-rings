@@ -37,7 +37,7 @@ class CNN(nn.Module):
         self.conv2_drop = nn.Dropout2d()
         #fully connected layer
         self.fc1 = nn.Linear(20*3*3, 50) # 20*3*3 = 180 
-        self.fc2 = nn.Linear(50, 7)
+        self.fc2 = nn.Linear(50, 10)
     def forward(self, x):
         x = self.conv1(x)
         x = F.max_pool2d(x, 2)
