@@ -15,10 +15,15 @@ parser.add_argument('--terraform-destroy-compute', dest='terraform_destroy_compu
 parser.add_argument('--skip-terraform', dest='skip_terraform', action='store_true', help='skips all terraform build actions') 
 parser.add_argument('--update-horovod-src', dest='update_horovod_src', action='store_true', \
         help='a debugging tool. Update horovod workers to local src. Just an update, no Terraform nor Docker commands.') 
+parser.add_argument('--update-pod-src', dest='update_pod_src', type=str, default=None, \
+        help='a debugging tool. Updates a specific pod with latest src. Just an update, no Terraform nor Docker '+\
+        'commands. Provide the pod name.') 
 parser.add_argument('--interactive-debugging-mode', dest='interactive_debugging_mode', action='store_true', \
         help='sleeps horovod pods for easier debugging') 
-parser.add_argument('--do-not-helm-install', dest='do_not_helm_install', action='store_true', help='does not install horovod workers, nor sets up storage') 
-parser.add_argument('--do-not-run-horovod', dest='do_not_run_horovod', action='store_true', help='allows for setup without running') 
+parser.add_argument('--do-not-helm-install', dest='do_not_helm_install', action='store_true', \
+        help='does not install horovod workers, nor sets up storage') 
+parser.add_argument('--do-not-run-horovod', dest='do_not_run_horovod', action='store_true', \
+        help='allows for setup without running') 
 args = parser.parse_args() 
 
 ## constants 
@@ -38,7 +43,7 @@ from build.cassandra import cassandra_deploy
 from build.minio import minio_deploy 
 from build.postgres import postgres_deploy 
 from build.viewer import viewer_deploy 
-from build.util import init_storage, run_horovod 
+from build.util import init_storage, run_horovod, update_pod_src 
 
 ## parse config path 
 if args.config_path is None: 
@@ -54,6 +59,11 @@ with open(config_path, 'r') as f:
 
 if args.update_horovod_src:
     update_horovod_worker_src(args.ROOT, args.config) 
+    exit(0) 
+    pass 
+
+if args.update_pod_src:
+    update_pod_src(args.ROOT, args.config, args.update_pod_src)
     exit(0) 
     pass 
 

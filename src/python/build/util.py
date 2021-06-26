@@ -105,6 +105,11 @@ def run_horovod(root, config):
     job_id = f'horovod-job-{rand_id}'
     return job_id  
 
+def update_pod_src(root, config, pod_name):
+    run(f'kubectl exec -it {pod_name} -- rm -rf /app/src', os_system=True) 
+    run(f'kubectl cp {root}/src {pod_name}:/app/src', os_system=True) 
+    pass 
+
 def __random_str(n_char=5): 
     letters = string.ascii_lowercase 
     return ''.join(random.choice(letters) for i in range(n_char))

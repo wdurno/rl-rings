@@ -29,7 +29,9 @@ def interactive_mode():
     print(__help) 
     obs = env.reset() 
     total_reward = 0.
+    total_iterations = 0 
     while True: 
+        total_iterations += 1 
         ## get action 
         key = __wait_for_key() 
         if key in key_map.keys():
@@ -43,7 +45,7 @@ def interactive_mode():
             ## store transition  
             transition = (obs_prev, action_int, obs, reward, int(done)) 
             upload_transition(transition) 
-            print('transition: '+str(('[obs_prev]', action_int, '[obs]', reward, int(done)))) 
+            print(f'action_int: {action_int}, total_reward: {total_reward}, total_iterations: {total_iterations}') 
             ## if game halted, reset 
             if done:
                 print('resetting environment due to `done`...') 
