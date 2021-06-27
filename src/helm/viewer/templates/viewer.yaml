@@ -60,6 +60,7 @@ spec:
         command:
           - "bash" 
           - "/app/src/scripts/viewer-entrypoint.sh"
+          - "--interactive-mode={{ .Values.interactive_mode }}"
           #- "python"
           #- "-u"
           #- "/app/src/python/debug.py"

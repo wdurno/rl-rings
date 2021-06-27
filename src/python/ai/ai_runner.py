@@ -17,8 +17,20 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import Dataset 
 import horovod.torch as hvd
+import argparse 
 
-from ai.util import upload_transition, sample_transitions, __int_to_game_action, write_latest_model 
+from ai.util import upload_transition, sample_transitions, \
+        __int_to_game_action, write_latest_model, get_latest_model
+
+parser = argparse.ArgumentParser(description='configure horovod execution') 
+parser.add_argument('--capture-transitions', dest='capture_transitions', default=True, help='send transitions to cassandra') 
+args = parser.parse_args() 
+## cast bools 
+if args.capture_transitions in [False, 'False', 'FALSE', 'false']: 
+    args.capture_transitions = False 
+else:
+    args.capture_transitions = True 
+    pass 
 
 ## Initialize MineRL environment 
 env = gym.make("MineRLTreechop-v0") 
@@ -57,7 +69,13 @@ class CNN(nn.Module):
 learning_rate = 0.01
 momentum = 0.5
 device = "cpu"
-model = CNN().to(device) #using cpu here
+model = CNN() 
+model_path = get_latest_model() 
+if model_path is not None:
+    ## load latest model 
+    model.load_state_dict(torch.load(model_path)) 
+    pass
+model.to(device) 
 optimizer = optim.SGD(model.parameters(), 
         lr=learning_rate,
         momentum=momentum)
@@ -70,15 +88,17 @@ hvd.broadcast_parameters(model.state_dict(),
 def train(model, device, optimizer, n_iter=100, discount=.99, \
         batch_size=batch_size_train):
     'fit model on current data'
+    n_grads_integrated = 0 
     model.train()
     for _ in range(n_iter):
         transitions = sample_transitions(batch_size) 
-        optimizer.zero_grad()
+        optimizer.zero_grad() 
         loss = __loss(model, device, transitions, discount=discount) 
         loss.backward()
         optimizer.step()
+        n_grads_integrated += len(n_grads_integrated) 
         pass
-    return float(loss)  
+    return float(loss), n_grads_integrated 
 
 ## define sample function 
 def sample(model, device, max_iter_seconds=60., halt_key=None): 
@@ -88,6 +108,7 @@ def sample(model, device, max_iter_seconds=60., halt_key=None):
     done = False 
     total_reward = 0. 
     iter_count = 0 
+    captured_transitions = 0 
     continue_iterating = True 
     t_start = time()  
     while continue_iterating: 
@@ -96,9 +117,12 @@ def sample(model, device, max_iter_seconds=60., halt_key=None):
         action_int, action_dict = __get_action(model, obs_prev, device) 
         obs, reward, done, _ = env.step(action_dict) 
         total_reward += reward 
-        ## store transition  
+        ## store transition 
         transition = (obs_prev, action_int, obs, reward, int(done)) 
-        upload_transition(transition) 
+        if args.capture_transitions: 
+            upload_transition(transition) 
+            captured_transitions += 1 
+            pass 
         ## if game halted, reset 
         if done:
             obs = env.reset() 
@@ -111,7 +135,7 @@ def sample(model, device, max_iter_seconds=60., halt_key=None):
     if iter_count == 0:
         return 0. 
     reward_rate = total_reward / iter_count 
-    return reward_rate 
+    return reward_rate, captured_transitions  
 
 ## define test function
 def test(model, device, batch_size=batch_size_test, max_iter_seconds=120., discount=.99):
@@ -171,14 +195,14 @@ if __name__ == '__main__':
     rank = hvd.rank() 
     t0 = time() 
     for epoch in range(1, NUM_EPOCH + 1):
-        reward_rate = sample(model, device) 
+        reward_rate, captured_transitions = sample(model, device) 
         t1 = time() - t0 
-        print(f'hvd-{rank}: dt: {t1}, reward_rate: {reward_rate}') 
-        train(model, device, optimizer) 
+        print(f'hvd-{rank}: dt: {t1}, reward_rate: {reward_rate}, transitions_generated: {captured_transitions}') 
+        train_loss, grads_integrated = train(model, device, optimizer) 
         t1 = time() - t0
-        print(f'hvd-{rank}: dt: {t1}, fitting iteration complete')
-        loss = test(model, device) 
+        print(f'hvd-{rank}: dt: {t1}, train_loss: {train_loss}, grads_integrated: {grads_integrated}')
+        test_loss = test(model, device) 
         t1 = time() - t0 
-        print(f'hvd-{rank}: dt: {t1}, epoch {epoch} of {NUM_EPOCH}, loss: {loss}') 
+        print(f'hvd-{rank}: dt: {t1}, epoch {epoch} of {NUM_EPOCH}, test_loss: {test_loss}') 
         if rank == 0: 
             write_latest_model(model) 
