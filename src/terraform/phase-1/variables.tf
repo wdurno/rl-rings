@@ -32,7 +32,7 @@ variable "compute_pool_name" {
 
 variable "number_of_compute_nodes" { 
   type = number
-  default = 3
+  default = 4
 }
 
 variable "compute_node_type" { 

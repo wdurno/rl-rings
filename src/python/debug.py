@@ -1,9 +1,16 @@
 from time import sleep
+import argparse 
+
+parser = argparse.ArgumentParser(description='run a sleeping process') 
+parser.add_argument('--silent', dest='silent', default=False, action='store_true', help='do no print') 
+args = parser.parse_args() 
 
 def interactive_debugging_mode():
-    print('starting in interactive debugging mode...')
+    if not args.silent: 
+        print('starting in interactive debugging mode...')
     while True:
-        print('sleeping 60 seconds...')
+        if not args.silent: 
+            print('sleeping 60 seconds...')
         sleep(60)
         pass
     pass

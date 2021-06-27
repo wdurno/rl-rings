@@ -4,11 +4,12 @@ BATCH_SIZE = 5000
 batch_size_train = 64 
 batch_size_test = 128 
 
+import os 
 import minerl 
 import gym 
 import numpy as np
 from random import shuffle 
-from time import time 
+from time import time, sleep  
 import torch
 import torchvision
 import torch.nn as nn
@@ -17,7 +18,7 @@ import torch.optim as optim
 from torch.utils.data import Dataset 
 import horovod.torch as hvd
 
-from ai.util import upload_transition, sample_transitions, __int_to_game_action 
+from ai.util import upload_transition, sample_transitions, __int_to_game_action, write_latest_model 
 
 ## Initialize MineRL environment 
 env = gym.make("MineRLTreechop-v0") 
@@ -36,7 +37,7 @@ class CNN(nn.Module):
         self.conv2_drop = nn.Dropout2d()
         #fully connected layer
         self.fc1 = nn.Linear(20*3*3, 50) # 20*3*3 = 180 
-        self.fc2 = nn.Linear(50, 7)
+        self.fc2 = nn.Linear(50, 10)
     def forward(self, x):
         x = self.conv1(x)
         x = F.max_pool2d(x, 2)
@@ -80,14 +81,16 @@ def train(model, device, optimizer, n_iter=100, discount=.99, \
     return float(loss)  
 
 ## define sample function 
-def sample(model, device, max_iter=20000): 
+def sample(model, device, max_iter_seconds=60., halt_key=None): 
     'generate new data using latest model'
     model.eval() 
     obs = env.reset() 
     done = False 
-    iter_counter = 0 
     total_reward = 0. 
-    while not done: 
+    iter_count = 0 
+    continue_iterating = True 
+    t_start = time()  
+    while continue_iterating: 
         ## shift transition 
         obs_prev = obs 
         action_int, action_dict = __get_action(model, obs_prev, device) 
@@ -99,23 +102,34 @@ def sample(model, device, max_iter=20000):
         ## if game halted, reset 
         if done:
             obs = env.reset() 
-        ## do not loop forever 
-        iter_counter += 1 
-        if iter_counter > max_iter:
-            done = True 
+            done = False 
+            pass 
+        iter_count += 1 
+        if time() - t_start > max_iter_seconds:
+            continue_iterating = False 
         pass 
-    reward_rate = total_reward / iter_counter
+    if iter_count == 0:
+        return 0. 
+    reward_rate = total_reward / iter_count 
     return reward_rate 
 
 ## define test function
-def test(model, device, batch_size=batch_size_test, n_iter=10, discount=.99):
+def test(model, device, batch_size=batch_size_test, max_iter_seconds=120., discount=.99):
     'evaluate model against test dataset'
     model.eval() 
     losses = [] 
-    for _ in range(n_iter): 
+    continue_iterating = True 
+    t_start = time() 
+    while continue_iterating: 
         transitions = sample_transitions(batch_size) 
         loss = __loss(model, device, transitions, discount=discount) 
         losses.append(float(loss)) 
+        if time() - t_start > max_iter_seconds: 
+            continue_iterating = False 
+            pass
+        pass
+    if len(losses) == 0:
+        return 0.
     return np.mean(losses) 
 
 def __loss(model, device, transition, discount=.99): 
@@ -154,10 +168,17 @@ def __get_action(model, single_obs, device):
     return action_int, action_dict 
 
 if __name__ == '__main__': 
+    rank = hvd.rank() 
     t0 = time() 
     for epoch in range(1, NUM_EPOCH + 1):
-        reward_rate = sample(model, device)
-        train(model, device, optimizer)
+        reward_rate = sample(model, device) 
+        t1 = time() - t0 
+        print(f'hvd-{rank}: dt: {t1}, reward_rate: {reward_rate}') 
+        train(model, device, optimizer) 
+        t1 = time() - t0
+        print(f'hvd-{rank}: dt: {t1}, fitting iteration complete')
         loss = test(model, device) 
         t1 = time() - t0 
-        print(f'dt: {t1}, epoch {epoch} of {NUM_EPOCH}, loss: {loss}, reward_rate: {reward_rate}') 
+        print(f'hvd-{rank}: dt: {t1}, epoch {epoch} of {NUM_EPOCH}, loss: {loss}') 
+        if rank == 0: 
+            write_latest_model(model) 
