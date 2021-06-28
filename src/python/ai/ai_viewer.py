@@ -7,13 +7,16 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Run a viewable environment') 
 parser.add_argument('--interactive-mode', dest='interactive_mode', default=False, help='manually control the session.') 
-args = parser.parse_args()
-## cast bool args 
-if args.interactive_mode in [True, 'True', 'true', 'TRUE']: 
-    args.interactive_mode = True 
-else:
-    args.interactive_mode = False 
-    pass 
+
+def __parse_args(): 
+    args = parser.parse_args()
+    ## cast bool args 
+    if args.interactive_mode in [True, 'True', 'true', 'TRUE']: 
+        args.interactive_mode = True 
+    else:
+        args.interactive_mode = False 
+        pass 
+    return args 
 
 def non_interactive_mode():
     while True: 
@@ -111,6 +114,7 @@ def __wait_for_key():
     return sys.stdin.read(1) 
 
 if __name__ == '__main__': 
+    args = __parse_args() 
     if args.interactive_mode:
         tty.setcbreak(sys.stdin.fileno()) ## read individual bytes from stdin without EOFs
         interactive_mode()  

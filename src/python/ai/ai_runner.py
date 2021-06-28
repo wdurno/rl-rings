@@ -23,14 +23,17 @@ from ai.util import upload_transition, sample_transitions, \
         __int_to_game_action, write_latest_model, get_latest_model
 
 parser = argparse.ArgumentParser(description='configure horovod execution') 
-parser.add_argument('--capture-transitions', dest='capture_transitions', default=True, help='send transitions to cassandra') 
-args = parser.parse_args() 
-## cast bools 
-if args.capture_transitions in [False, 'False', 'FALSE', 'false']: 
-    args.capture_transitions = False 
-else:
-    args.capture_transitions = True 
-    pass 
+parser.add_argument('--capture-transitions', dest='capture_transitions', default=True, help='send transitions to cassandra')  
+
+def __parse_args():
+    args = parser.parse_args() 
+    ## cast bools 
+    if args.capture_transitions in [False, 'False', 'FALSE', 'false']: 
+        args.capture_transitions = False 
+    else:
+        args.capture_transitions = True 
+        pass 
+    return args 
 
 ## Initialize MineRL environment 
 env = gym.make("MineRLTreechop-v0") 
@@ -96,12 +99,12 @@ def train(model, device, optimizer, n_iter=100, discount=.99, \
         loss = __loss(model, device, transitions, discount=discount) 
         loss.backward()
         optimizer.step()
-        n_grads_integrated += len(n_grads_integrated) 
+        n_grads_integrated += len(transitions) 
         pass
     return float(loss), n_grads_integrated 
 
 ## define sample function 
-def sample(model, device, max_iter_seconds=60., halt_key=None): 
+def sample(model, device, max_iter_seconds=60., capture_transitions=True): 
     'generate new data using latest model'
     model.eval() 
     obs = env.reset() 
@@ -119,7 +122,7 @@ def sample(model, device, max_iter_seconds=60., halt_key=None):
         total_reward += reward 
         ## store transition 
         transition = (obs_prev, action_int, obs, reward, int(done)) 
-        if args.capture_transitions: 
+        if capture_transitions: 
             upload_transition(transition) 
             captured_transitions += 1 
             pass 
@@ -193,9 +196,10 @@ def __get_action(model, single_obs, device):
 
 if __name__ == '__main__': 
     rank = hvd.rank() 
+    args = __parse_args() 
     t0 = time() 
     for epoch in range(1, NUM_EPOCH + 1):
-        reward_rate, captured_transitions = sample(model, device) 
+        reward_rate, captured_transitions = sample(model, device, capture_transitions=args.capture_transitions) 
         t1 = time() - t0 
         print(f'hvd-{rank}: dt: {t1}, reward_rate: {reward_rate}, transitions_generated: {captured_transitions}') 
         train_loss, grads_integrated = train(model, device, optimizer) 

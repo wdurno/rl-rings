@@ -12,12 +12,12 @@ import base64
 ## constants 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
 
-def upload_transition(transition, retry_delay=60):
+def upload_transition(transition, manually_generated=False, retry_delay=60):
     continue_attempting = True 
     while continue_attempting: 
         try: 
             _uuid = cc.insert_game_transition(transition) 
-            pc.write_transition_id(_uuid) 
+            pc.write_transition_id(_uuid, manually_generated=manually_generated) 
             continue_attempting = False 
         except Exception as e:
             print(e)
