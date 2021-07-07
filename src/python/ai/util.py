@@ -3,6 +3,7 @@ from collections import OrderedDict
 from time import time, sleep
 from io import BytesIO 
 import requests 
+import pickle 
 import types 
 import torch 
 import os 
@@ -112,6 +113,11 @@ def write_latest_model(model, models_dir='/models'):
     ## update latest 
     pc.set_model_path(model_name) 
     return model_name  
+
+def download_all_transitions(): 
+    uuids = cc.get_all_game_transition_uuids() 
+    transition_list = cc.get_transitions(uuids) 
+    return transition_list 
 
 def __game_state_to_tensor(state: OrderedDict):
     ## only pov exists for now 

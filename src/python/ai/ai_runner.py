@@ -19,6 +19,7 @@ from torch.utils.data import Dataset
 import horovod.torch as hvd
 import argparse 
 
+from connectors import pc 
 from ai.util import upload_transition, sample_transitions, \
         __int_to_game_action, write_latest_model, get_latest_model
 
@@ -99,7 +100,7 @@ def train(model, device, optimizer, n_iter=100, discount=.99, \
         loss = __loss(model, device, transitions, discount=discount) 
         loss.backward()
         optimizer.step()
-        n_grads_integrated += len(transitions) 
+        n_grads_integrated += transitions[0].shape[0] ## pov.shape[0] 
         pass
     return float(loss), n_grads_integrated 
 
@@ -210,3 +211,5 @@ if __name__ == '__main__':
         print(f'hvd-{rank}: dt: {t1}, epoch {epoch} of {NUM_EPOCH}, test_loss: {test_loss}') 
         if rank == 0: 
             write_latest_model(model) 
+            total_transitions = pc.get_total_transitions() 
+            print(f'total_transitions: {total_transitions}') 

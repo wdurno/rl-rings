@@ -22,6 +22,10 @@ parser.add_argument('--interactive-debugging-mode', dest='interactive_debugging_
         help='sleeps horovod pods for easier debugging') 
 parser.add_argument('--do-not-helm-install', dest='do_not_helm_install', action='store_true', \
         help='does not install horovod workers, nor sets up storage') 
+parser.add_argument('--viewer-set-interactive-mode', dest='viewer_set_interactive_mode', action='store_true', \
+        help='redeploy viewer in interactive mode. Take no further action.') 
+parser.add_argument('--viewer-set-non-interactive-mode', dest='viewer_set_non_interactive_mode', action='store_true', \
+        help='redeploy viewer in non-interactive-mode. Take no further action.') 
 parser.add_argument('--do-not-run-horovod', dest='do_not_run_horovod', action='store_true', \
         help='allows for setup without running') 
 args = parser.parse_args() 
@@ -76,6 +80,16 @@ if args.terraform_destroy:
     terraform_destroy(args.ROOT, args.config) 
     exit(0) 
     pass
+
+if args.viewer_set_interactive_mode: 
+    viewer_deploy(args.ROOT, args.config, interactive_mode=True) 
+    exit(0) 
+    pass 
+
+if args.viewer_set_non_interactive_mode:
+    viewer_deploy(args.ROOT, args.config, interactive_mode=False) 
+    exit(0) 
+    pass 
 
 if not args.skip_terraform:
     ## deploy build-essential infrastructure 

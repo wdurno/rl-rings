@@ -30,6 +30,7 @@ RUN echo "installing libraries..." && \
         libibverbs1 \
         ibverbs-providers \
 	openjdk-8-jdk \
+	azure-cli \
 	tmux \
 	xvfb \
 	x11-xserver-utils \
