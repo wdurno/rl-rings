@@ -65,7 +65,7 @@ spec:
         resources:
           requests:
             cpu: "1500m"
-            memory: "5Gi"
+            memory: "25Gi"
         volumeMounts:
           - name: models-data
             mountPath: /models
