@@ -164,4 +164,10 @@ class PostgresConnector(__StorageABC):
         model_id = row_list[0][0] 
         path = row_list[0][1] 
         return model_id, path 
+
+    def delete_latest_model(self): 
+        'deletes SQL entry, not MinIO'
+        sql = 'TRUNCATE latest_model;' 
+        self.__exec(sql) 
+        pass 
     pass

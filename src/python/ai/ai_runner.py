@@ -45,24 +45,42 @@ hvd.init()
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
-        #input channel 1, output channel 10
-        self.conv1 = nn.Conv2d(3, 10, kernel_size=5, stride=2)
-        #input channel 10, output channel 20
-        self.conv2 = nn.Conv2d(10, 20, kernel_size=5, stride=2)
+        # convs 
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, stride=1) 
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1)
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1)
+        self.conv4 = nn.Conv2d(128, 256, kernel_size=3, stride=2) 
+        # max pool 
+        self.conv5 = nn.Conv2d(256, 512, kernel_size=3, stride=1) 
+        self.conv6 = nn.Conv2d(512, 1024, kernel_size=3, stride=1) 
+        self.conv7 = nn.Conv2d(1024, 2048, kernel_size=3, stride=1) 
+        self.conv8 = nn.Conv2d(2048, 4096, kernel_size=3, stride=2)
         #dropout layer
-        self.conv2_drop = nn.Dropout2d()
+        self.conv_drop = nn.Dropout2d()
         #fully connected layer
-        self.fc1 = nn.Linear(20*3*3, 50) # 20*3*3 = 180 
+        self.fc1 = nn.Linear(4096*1*1, 50) 
         self.fc2 = nn.Linear(50, 10)
     def forward(self, x):
-        x = self.conv1(x)
+        x = self.conv1(x) 
+        x = F.relu(x) 
+        x = self.conv2(x) 
+        x = F.relu(x) 
+        x = self.conv3(x) 
+        x = F.relu(x) 
+        x = self.conv4(x) 
         x = F.max_pool2d(x, 2)
+        x = F.relu(x) 
+        x = self.conv5(x) 
+        x = F.relu(x) 
+        x = self.conv6(x) 
+        x = F.relu(x) 
+        x = self.conv7(x) 
+        x = F.relu(x) 
+        x = self.conv8(x) # returns shape [4096, 3, 3]
+        x = self.conv_drop(x)
+        x = F.max_pool2d(x, 2) # returns shape [4096, 1, 1] 
         x = F.relu(x)
-        x = self.conv2(x)
-        x = self.conv2_drop(x)
-        x = F.max_pool2d(x, 2)
-        x = F.relu(x)
-        x = x.view(-1, 20*3*3)
+        x = x.view(-1, 4096*1*1)
         x = self.fc1(x)
         x = F.relu(x)
         x = F.dropout(x)
@@ -89,7 +107,7 @@ hvd.broadcast_parameters(model.state_dict(),
         root_rank=0) 
 
 ## define train function
-def train(model, device, optimizer, n_iter=100, discount=.99, \
+def train(model, device, optimizer, n_iter=1000, discount=.99, \
         batch_size=batch_size_train):
     'fit model on current data'
     n_grads_integrated = 0 
