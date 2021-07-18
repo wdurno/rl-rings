@@ -24,6 +24,7 @@ def guarantee_phase_2_architecture(root, config):
     '''
     __copy_phase_2_tf_files(root)
     __terraform_apply(root, config)
+    __install_nvidia_drivers(root) 
     pass
 
 def terraform_destroy(root, config):
@@ -102,3 +103,7 @@ def __get_base_var_str(config):
             f' -var="number_of_storage_nodes={n_storage_nodes}"'
     return base_var_str
 
+def __install_nvidia_drivers(root): 
+    cmd = f'kubectl apply -f {root}/src/k8s/azure-cuda-daemon.yaml' 
+    run(cmd, os_system=True)  
+    pass 

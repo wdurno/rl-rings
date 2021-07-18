@@ -107,7 +107,7 @@ hvd.broadcast_parameters(model.state_dict(),
         root_rank=0) 
 
 ## define train function
-def train(model, device, optimizer, n_iter=1000, discount=.99, \
+def train(model, device, optimizer, n_iter=100, discount=.99, \
         batch_size=batch_size_train):
     'fit model on current data'
     n_grads_integrated = 0 
