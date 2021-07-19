@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.1.1-base-ubuntu20.04
+FROM nvidia/cuda:11.4.0-base-ubuntu20.04
 
 ENV TENSORFLOW_VERSION=1.14.0 \
     PYTORCH_VERSION=1.4.0 \
@@ -49,17 +49,17 @@ RUN echo "installing libraries..." && \
         libibverbs1 \
         ibverbs-providers \
         openjdk-8-jdk \
-        azure-cli \
         tmux \
         xvfb \
         x11-xserver-utils \
         fluxbox \
         x11vnc \
-        python3-psycopg2 \
-        python3-distutils && \
-    echo "installing python and fundamental packages..." && \
+	python3-dev \
+        python3-psycopg2 
+
+RUN echo "installing openmpi and fundamental packages..." && \
     pip install --upgrade pip && \
-    pip install setuptools && \
+    pip install --upgrade setuptools && \
     pip install \
         scikit-build \
         future \
@@ -101,6 +101,9 @@ RUN echo "installing horovod..." && \
     ssh-keygen -b 2048 -t rsa -f ~/.ssh/id_rsa -q -N "" && \
     cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys && \
     chmod 700 ~/.ssh/*
+
+## caused version conflicts during install 
+RUN apt-get install -y azure-cli 
 
 ## these layers are most-likely to be modified during development 
 ADD src /app/src

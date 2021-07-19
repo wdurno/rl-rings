@@ -67,6 +67,8 @@ spec:
             cpu: "1500m"
             memory: "25Gi"
             nvidia.com/gpu: 1
+          limits:
+            nvidia.com/gpu: 1
         volumeMounts:
           - name: models-data
             mountPath: /models
