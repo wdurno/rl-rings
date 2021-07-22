@@ -8,7 +8,8 @@ ENV TENSORFLOW_VERSION=1.14.0 \
     DEBIAN_FRONTEND=noninteractive \
     PYTHONPATH=/app/src/python:/usr/lib/python3/dist-packages \
     CONDA_AUTO_UPDATE_CONDA=false \
-    PATH=/root/miniconda/bin:$PATH
+    PATH=/root/miniconda/bin:$PATH \
+    HOROVOD_DISTRO_ARCH=ubuntu2004/x86_64
 
 # Set default shell to /bin/bash
 SHELL ["/bin/bash", "-cu"]
@@ -55,7 +56,13 @@ RUN echo "installing libraries..." && \
         fluxbox \
         x11vnc \
 	python3-dev \
-        python3-psycopg2 
+        python3-psycopg2 \
+	software-properties-common && \
+    echo "installing Horovod cuda drivers..." && \
+    apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/${HOROVOD_DISTRO_ARCH}/7fa2af80.pub && \
+    add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/${HOROVOD_DISTRO_ARCH}/ /" && \
+    apt update && \
+    apt install libnccl2 libnccl-dev 
 
 RUN echo "installing openmpi and fundamental packages..." && \
     pip install --upgrade pip && \
@@ -73,7 +80,6 @@ RUN echo "installing openmpi and fundamental packages..." && \
         Jinja2 \
         cassandra-driver \
         pandas && \
-    pip install torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} && \
     echo "installing openmpi..." && \
     mkdir /tmp/openmpi && \
     cd /tmp/openmpi && \
@@ -91,6 +97,7 @@ RUN echo "installing openmpi and fundamental packages..." && \
 ## pip needs a refresh 
 RUN echo "installing horovod..." && \
     HOROVOD_WITH_PYTORCH=1 \
+    HOROVOD_GPU_OPERATIONS=NCCL \
     pip install --no-cache-dir horovod==${HOROVOD_VERSION} && \
     echo "install ssh for mpi..." && \
     apt-get install -y --no-install-recommends openssh-client openssh-server && \
@@ -102,8 +109,9 @@ RUN echo "installing horovod..." && \
     cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys && \
     chmod 700 ~/.ssh/*
 
-## caused version conflicts during install 
-RUN apt-get install -y azure-cli 
+## remidiating version conflicts  
+RUN apt-get install -y azure-cli && \
+    pip uninstall -y humanfriendly 
 
 ## these layers are most-likely to be modified during development 
 ADD src /app/src

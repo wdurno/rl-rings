@@ -90,7 +90,7 @@ class CNN(nn.Module):
 ## create model and optimizer
 learning_rate = 0.01
 momentum = 0.5
-device = "cpu"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
 model = CNN() 
 model_path = get_latest_model() 
 if model_path is not None:
@@ -204,7 +204,7 @@ def __get_action(model, single_obs, device):
      - action_dict: for use by gym 
     '''
     ## format observation 
-    pov = torch.from_numpy(single_obs['pov']).to(device) 
+    pov = torch.from_numpy(single_obs['pov'].copy()).to(device) 
     pov = pov.reshape(1, 64, 64, 3)  
     pov = pov.permute(0, 3, 1, 2)/255.-.5 
     ## get action 
