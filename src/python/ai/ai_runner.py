@@ -91,20 +91,22 @@ class CNN(nn.Module):
 learning_rate = 0.01
 momentum = 0.5
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+CPU = torch.device('cpu') 
 model = CNN() 
 model_path = get_latest_model() 
 if model_path is not None:
     ## load latest model 
     model.load_state_dict(torch.load(model_path)) 
     pass
-model.to(device) 
+model.to(CPU) # mitigating horovod's gpu driver errors  
 optimizer = optim.SGD(model.parameters(), 
         lr=learning_rate,
         momentum=momentum)
 optimizer = hvd.DistributedOptimizer(optimizer, 
-        named_parameters=model.named_parameters()) 
+        named_parameters=model.named_parameters())  
 hvd.broadcast_parameters(model.state_dict(), 
         root_rank=0) 
+model.to(device) 
 
 ## define train function
 def train(model, device, optimizer, n_iter=100, discount=.99, \
@@ -117,7 +119,9 @@ def train(model, device, optimizer, n_iter=100, discount=.99, \
         optimizer.zero_grad() 
         loss = __loss(model, device, transitions, discount=discount) 
         loss.backward()
+        model.to(CPU) # mitigating horovod's gpu driver errors 
         optimizer.step()
+        model.to(device)
         n_grads_integrated += transitions[0].shape[0] ## pov.shape[0] 
         pass
     return float(loss), n_grads_integrated 
@@ -167,7 +171,7 @@ def test(model, device, batch_size=batch_size_test, max_iter_seconds=120., disco
     continue_iterating = True 
     t_start = time() 
     while continue_iterating: 
-        transitions = sample_transitions(batch_size) 
+        transitions = sample_transitions(batch_size)
         loss = __loss(model, device, transitions, discount=discount) 
         losses.append(float(loss)) 
         if time() - t_start > max_iter_seconds: 
@@ -183,7 +187,7 @@ def __loss(model, device, transition, discount=.99):
     obs_prev, action, obs, reward, done = transition 
     obs_prev = obs_prev.to(device) 
     action = action.to(device) 
-    obs.to(device) 
+    obs = obs.to(device) 
     reward = reward.to(device) 
     done = done.to(device) 
     ## shaping data  

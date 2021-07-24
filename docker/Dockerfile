@@ -97,7 +97,6 @@ RUN echo "installing openmpi and fundamental packages..." && \
 ## pip needs a refresh 
 RUN echo "installing horovod..." && \
     HOROVOD_WITH_PYTORCH=1 \
-    HOROVOD_GPU_OPERATIONS=NCCL \
     pip install --no-cache-dir horovod==${HOROVOD_VERSION} && \
     echo "install ssh for mpi..." && \
     apt-get install -y --no-install-recommends openssh-client openssh-server && \
