@@ -1,4 +1,8 @@
 
+#### v0.4.0 
+
+GPUs
+
 #### v0.3.0 
 
 Enabled manual data generation and bot viewing 

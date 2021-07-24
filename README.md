@@ -32,3 +32,10 @@ You can connect to an environment to manually generate data to bootstrap model f
 
 ![screen1](notes/images/rl-screen1.png) 
 
+
+## hardware requirements 
+
+Azure VM node types are listed [here](src/terraform/phase-1/variables.tf). You'll likely need to request increased [quotas](https://docs.microsoft.com/en-us/azure/azure-portal/supportability/per-vm-quota-requests) for these node types:
+- `NC6s v2` (GPUs)
+- `A2M v2`
+
