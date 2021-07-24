@@ -1,4 +1,12 @@
 
+#### v0.4.0 
+
+GPUs
+
+#### v0.3.0 
+
+Enabled manual data generation and bot viewing 
+
 #### v0.2.0
 
 Use horovod as distributed optimizer

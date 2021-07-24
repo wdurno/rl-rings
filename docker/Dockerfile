@@ -1,6 +1,4 @@
-FROM ubuntu:18.04
-
-ARG python=3.6
+FROM nvidia/cuda:11.4.0-base-ubuntu20.04
 
 ENV TENSORFLOW_VERSION=1.14.0 \
     PYTORCH_VERSION=1.4.0 \
@@ -8,55 +6,80 @@ ENV TENSORFLOW_VERSION=1.14.0 \
     MXNET_VERSION=1.6.0 \
     HOROVOD_VERSION=0.19.0 \
     DEBIAN_FRONTEND=noninteractive \
-    PYTHONPATH=/app/src/python 
+    PYTHONPATH=/app/src/python:/usr/lib/python3/dist-packages \
+    CONDA_AUTO_UPDATE_CONDA=false \
+    PATH=/root/miniconda/bin:$PATH \
+    HOROVOD_DISTRO_ARCH=ubuntu2004/x86_64
 
 # Set default shell to /bin/bash
 SHELL ["/bin/bash", "-cu"]
+
+RUN echo "installing cudnn via miniconda..." && \
+    apt-get update && apt-get install -y \
+        curl \
+        ca-certificates \
+        sudo \
+        git \
+        bzip2 \
+        libx11-6 && \
+    rm -rf /var/lib/apt/lists/* && \
+    curl -sLo ~/miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-py38_4.8.3-Linux-x86_64.sh && \
+    chmod +x ~/miniconda.sh && \
+    ~/miniconda.sh -b -p ~/miniconda && \
+    rm ~/miniconda.sh && \
+    conda install -y python==3.8.3 && \
+    conda clean -ya && \
+    echo "CUDA 11.1-specific steps..." && \
+    conda install -y -c conda-forge cudatoolkit=11.1.1 && \
+    conda install -y -c pytorch \
+        "pytorch=1.8.1=py3.8_cuda11.1_cudnn8.0.5_0" \
+        "torchvision=0.9.1=py38_cu111" && \
+    conda clean -ya
 
 RUN echo "installing libraries..." && \
     apt-get update && apt-get install -y --allow-downgrades --allow-change-held-packages --no-install-recommends \
         build-essential \
         cmake \
-        g++-4.8 \
-        git \
-        curl \
+        g++ \
         vim \
         wget \
         ca-certificates \
         libjpeg-dev \
         libpng-dev \
-	python3-pip \
         librdmacm1 \
         libibverbs1 \
         ibverbs-providers \
-	openjdk-8-jdk \
-	tmux \
-	xvfb \
-	x11-xserver-utils \
-	fluxbox \
-	x11vnc \
+        openjdk-8-jdk \
+        tmux \
+        xvfb \
+        x11-xserver-utils \
+        fluxbox \
+        x11vnc \
 	python3-dev \
-	python3-psycopg2 \
-	python3-distutils && \
-    echo "installing python and fundamental packages..." && \
-    ln -s /usr/bin/python3 /usr/bin/python && \
-    ln -s /usr/bin/pip3 /usr/bin/pip && \
+        python3-psycopg2 \
+	software-properties-common && \
+    echo "installing Horovod cuda drivers..." && \
+    apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/${HOROVOD_DISTRO_ARCH}/7fa2af80.pub && \
+    add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/${HOROVOD_DISTRO_ARCH}/ /" && \
+    apt update && \
+    apt install libnccl2 libnccl-dev 
+
+RUN echo "installing openmpi and fundamental packages..." && \
     pip install --upgrade pip && \
-    pip install setuptools && \
+    pip install --upgrade setuptools && \
     pip install \
-	scikit-build \
+        scikit-build \
         future \
-	typing \
-	numpy \
-	scipy \
-	matplotlib \
-	gym \
-	minerl \
-	minio \
-	Jinja2 \
-	cassandra-driver \
-	pandas && \
-    pip install torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} && \
+        typing \
+        numpy \
+        scipy \
+        matplotlib \
+        gym \
+        minerl \
+        minio \
+        Jinja2 \
+        cassandra-driver \
+        pandas && \
     echo "installing openmpi..." && \
     mkdir /tmp/openmpi && \
     cd /tmp/openmpi && \
@@ -85,9 +108,13 @@ RUN echo "installing horovod..." && \
     cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys && \
     chmod 700 ~/.ssh/*
 
+## remidiating version conflicts  
+RUN apt-get install -y azure-cli && \
+    pip uninstall -y humanfriendly 
+
 ## these layers are most-likely to be modified during development 
 ADD src /app/src
 
-RUN pip3 install -r /app/src/python/requirements.txt
+RUN pip install -r /app/src/python/requirements.txt
 
 WORKDIR "/app"

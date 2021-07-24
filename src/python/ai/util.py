@@ -3,6 +3,7 @@ from collections import OrderedDict
 from time import time, sleep
 from io import BytesIO 
 import requests 
+import pickle 
 import types 
 import torch 
 import os 
@@ -12,12 +13,12 @@ import base64
 ## constants 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
 
-def upload_transition(transition, retry_delay=60):
+def upload_transition(transition, manually_generated=False, retry_delay=60):
     continue_attempting = True 
     while continue_attempting: 
         try: 
             _uuid = cc.insert_game_transition(transition) 
-            pc.write_transition_id(_uuid) 
+            pc.write_transition_id(_uuid, manually_generated=manually_generated) 
             continue_attempting = False 
         except Exception as e:
             print(e)
@@ -112,6 +113,11 @@ def write_latest_model(model, models_dir='/models'):
     ## update latest 
     pc.set_model_path(model_name) 
     return model_name  
+
+def download_all_transitions(): 
+    uuids = cc.get_all_game_transition_uuids() 
+    transition_list = cc.get_transitions(uuids) 
+    return transition_list 
 
 def __game_state_to_tensor(state: OrderedDict):
     ## only pov exists for now 

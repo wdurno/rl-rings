@@ -6,9 +6,17 @@ from ai.util import get_latest_model, upload_transition, __int_to_game_action
 import argparse 
 
 parser = argparse.ArgumentParser(description='Run a viewable environment') 
-parser.add_argument('--interactive-mode', dest='interactive_mode', action='store_true', default=False, \
-        help='manually control the session.') 
-args = parser.parse_args()
+parser.add_argument('--interactive-mode', dest='interactive_mode', default=False, help='manually control the session.') 
+
+def __parse_args(): 
+    args = parser.parse_args()
+    ## cast bool args 
+    if args.interactive_mode in [True, 'True', 'true', 'TRUE']: 
+        args.interactive_mode = True 
+    else:
+        args.interactive_mode = False 
+        pass 
+    return args 
 
 def non_interactive_mode():
     while True: 
@@ -44,7 +52,7 @@ def interactive_mode():
             total_reward += reward 
             ## store transition  
             transition = (obs_prev, action_int, obs, reward, int(done)) 
-            upload_transition(transition) 
+            upload_transition(transition, manually_generated=True) 
             print(f'action_int: {action_int}, total_reward: {total_reward}, total_iterations: {total_iterations}') 
             ## if game halted, reset 
             if done:
@@ -69,12 +77,12 @@ __key_help = {
         's': 'back', 
         'a': 'left', 
         'd': 'right', 
-        '8': 'look-up',
-        '2': 'look-down',
-        '4': 'look-left', 
-        '6': 'look-right', 
-        '0': 'jump', 
-        '5': 'no-op'
+        'i': 'look-up',
+        'k': 'look-down',
+        'j': 'look-left', 
+        'l': 'look-right', 
+        ' ': 'jump', 
+        'e': 'no-op'
         } 
 
 __key_map = { 
@@ -106,6 +114,7 @@ def __wait_for_key():
     return sys.stdin.read(1) 
 
 if __name__ == '__main__': 
+    args = __parse_args() 
     if args.interactive_mode:
         tty.setcbreak(sys.stdin.fileno()) ## read individual bytes from stdin without EOFs
         interactive_mode()  

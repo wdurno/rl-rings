@@ -69,7 +69,7 @@ class PostgresConnector(__StorageABC):
                    reward FLOAT4,
                    frames INT4);
                ''' 
-        sql3 = 'CREATE TABLE transitions(transition_id UUID PRIMARY KEY);'
+        sql3 = 'CREATE TABLE transitions(transition_id UUID PRIMARY KEY, manually_generated BOOLEAN);'
         sql4 = 'CREATE TABLE latest_model(model_id INT4 PRIMARY KEY, path TEXT);'
         sql5 = "INSERT INTO latest_model VALUES (0, '');" 
         ## init DB requires special connection 
@@ -113,12 +113,23 @@ class PostgresConnector(__StorageABC):
         data_frames = {'sim_metrics': sim_metrics, 'grad_metrics': grad_metrics} 
         return data_frames 
 
-    def write_transition_id(self, _uuid):
+    def write_transition_id(self, _uuid, manually_generated=False):
         'write a transition uuid to postgres'
-        sql = f"INSERT INTO transitions VALUES ('{_uuid}')" 
+        ## format bool as SQL 
+        if manually_generated:
+            manually_generated = 'TRUE'
+        else:
+            manually_generated = 'FALSE'
+        ## generate cmd and exec 
+        sql = f"INSERT INTO transitions VALUES ('{_uuid}', {manually_generated})" 
         self.__exec(sql) 
         pass
     
+    def delete_non_manually_generated_transitions(self):
+        sql = 'DELETE FROM transitions WHERE NOT manually_generated'
+        self.__exec(sql) 
+        pass 
+
     def get_total_transitions(self): 
         sql = 'SELECT COUNT(*) FROM transitions;'
         rows = self.__exec(sql) 
@@ -153,4 +164,10 @@ class PostgresConnector(__StorageABC):
         model_id = row_list[0][0] 
         path = row_list[0][1] 
         return model_id, path 
+
+    def delete_latest_model(self): 
+        'deletes SQL entry, not MinIO'
+        sql = 'TRUNCATE latest_model;' 
+        self.__exec(sql) 
+        pass 
     pass

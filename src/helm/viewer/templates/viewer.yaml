@@ -60,6 +60,7 @@ spec:
         command:
           - "bash" 
           - "/app/src/scripts/viewer-entrypoint.sh"
+          - "--interactive-mode={{ .Values.interactive_mode }}"
           #- "python"
           #- "-u"
           #- "/app/src/python/debug.py"
@@ -67,6 +68,9 @@ spec:
           requests:
             cpu: "1500m"
             memory: "5Gi"
+            nvidia.com/gpu: 1
+          limits:           
+            nvidia.com/gpu: 1
         volumeMounts:
           - name: models-data
             mountPath: /models
