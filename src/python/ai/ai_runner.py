@@ -185,8 +185,9 @@ def sample(model, device, max_iter_seconds=60., capture_transitions=True):
             continue_iterating = False 
         pass 
     if iter_count == 0:
-        return 0. 
-    reward_rate = total_reward / iter_count 
+        reward_rate = 0.
+    else: 
+        reward_rate = total_reward / iter_count 
     return reward_rate, captured_transitions  
 
 ## define test function
@@ -231,21 +232,10 @@ def __get_action(model, single_obs, device):
      - action_int: compact representation, for storage 
      - action_dict: for use by gym 
     '''
-    ## format observation 
-    pov = torch.from_numpy(single_obs['pov'].copy()).to(device) 
-    pov = pov.reshape(1, 64, 64, 3)  
-    pov = pov.permute(0, 3, 1, 2)/255.-.5 
-    ## get action 
     pred_reward = model(pov) 
     action_int = int(torch.argmax(pred_reward, 1)[0]) 
     action_dict = __int_to_game_action(action_int)  
     return action_int, action_dict 
-
-def __format_observation(obs):
-    formatted_obs = {} 
-    if 'pov' in obs:
-        ## TODO move to CNN class, use in `forward`. Avoid code duplication. See `__loss`.  
-    return formatted_obs 
 
 if __name__ == '__main__': 
     rank = hvd.rank() 
