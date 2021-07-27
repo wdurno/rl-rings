@@ -34,8 +34,9 @@ def upload_metrics():
 def sample_transitions(n=100):
     '''
     Randomly sample transitions.
-    Returns list of tensors if successful, otherwise `None`. 
+    Returns list of 5 tensors if successful, otherwise `None`. 
     '''
+    ## TODO what are the 5 entries? Put in doc string 
     ## pull data from db 
     uuids = pc.sample_transition_ids(n) 
     rows = cc.get_transitions(uuids) 
@@ -46,8 +47,8 @@ def sample_transitions(n=100):
     for col in range(5): 
         ## first and third entries are dicts 
         if col in [0, 2]: 
-            #out.append({'pov': [], 'compass': []}) 
-            out.append({'pov': []})  
+            out.append({'pov': [], 'compass': []}) 
+            #out.append({'pov': []})  
         else:
             out.append([]) 
             pass
@@ -56,9 +57,9 @@ def sample_transitions(n=100):
         for col in range(5): 
             if col in [0, 2]: 
                 pov = row[col]['pov'] 
-                #compass = row[col]['compass'] 
+                compass = row[col]['compass']['angle'] 
                 out[col]['pov'].append(pov) 
-                #out[col]['compass'].append(compass) 
+                out[col]['compass'].append(compass) 
             else: 
                 out[col].append(row[col]) 
                 pass 
@@ -67,12 +68,12 @@ def sample_transitions(n=100):
     for col in range(5): 
         if col in [0, 2]:
             pov = out[col]['pov'] 
-            #compass = out[col]['compass'] 
+            compass = out[col]['compass'] 
             out[col] = {
                     'pov': torch.from_numpy(np.stack(pov)),
-                    #'compass': torch.stack(tuple(compass)) 
+                    'compass': torch.from_numpy(np.stack(compass))
                     } 
-            out[col] = out[col]['pov'] ## logic complicate asfeeds are added 
+            #out[col] = out[col]['pov'] ## logic complicate asfeeds are added 
         else:
             out[col] = torch.from_numpy(np.stack(out[col])) 
             pass 
@@ -137,6 +138,7 @@ def __int_to_game_action(action: int):
             'right': int(action == 7), 
             'jump': int(action == 8), 
             'sneak': 0, 
-            'sprint': 0 
+            'sprint': 0, 
+            'place': 'none'
             }
 

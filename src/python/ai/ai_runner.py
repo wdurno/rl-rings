@@ -37,7 +37,7 @@ def __parse_args():
     return args 
 
 ## Initialize MineRL environment 
-env = gym.make("MineRLTreechop-v0") 
+env = gym.make('MineRLNavigateDense-v0') 
 
 ## Initialize Horovod
 hvd.init() 
@@ -58,9 +58,12 @@ class CNN(nn.Module):
         #dropout layer
         self.conv_drop = nn.Dropout2d()
         #fully connected layer
-        self.fc1 = nn.Linear(4096*1*1, 50) 
+        self.fc1 = nn.Linear(4096*1*1+1, 50) # 4096*1*1 for pov matrix, +1 for vec 
         self.fc2 = nn.Linear(50, 10)
-    def forward(self, x):
+
+    def forward(self, obs): 
+        obs = CNN.__format_observation(obs) 
+        x = obs['pov'] 
         x = self.conv1(x) 
         x = F.relu(x) 
         x = self.conv2(x) 
@@ -80,12 +83,35 @@ class CNN(nn.Module):
         x = self.conv_drop(x)
         x = F.max_pool2d(x, 2) # returns shape [4096, 1, 1] 
         x = F.relu(x)
-        x = x.view(-1, 4096*1*1)
+        x = x.view(-1, 4096*1*1) 
+        v = obs['vec']
+        x = torch.cat([x, v], dim=1) 
         x = self.fc1(x)
         x = F.relu(x)
         x = F.dropout(x)
         x = self.fc2(x)
         return x 
+    
+    @staticmethod 
+    def __format_observation(obs):
+        formatted_obs = {} 
+        ## format pov matrix 
+        pov = obs['pov'] 
+        pov = pov.reshape(-1, 64, 64, 3) 
+        pov = pov.permute(0, 3, 1, 2)/255.-.5
+        formatted_obs['pov'] = pov 
+        ## format vecs 
+        n = pov.shape[0] 
+        vec = torch.zeros([n, 1]) 
+        ## this section will complicate as games are added 
+        if 'compass' in obs: 
+            if type(obs['compass']) == dict:
+                ## handle the single observation case 
+                obs['compass'] = obs['compass']['angle']
+            vec[0,:] = obs['compass']/180. 
+        formatted_obs['vec'] = vec 
+        return formatted_obs
+    pass 
 
 ## create model and optimizer
 learning_rate = 0.01
@@ -191,8 +217,6 @@ def __loss(model, device, transition, discount=.99):
     reward = reward.to(device) 
     done = done.to(device) 
     ## shaping data  
-    obs_prev = obs_prev.permute(0, 3, 1, 2)/255.-.5 # torch has channels up-front  
-    obs = obs.permute(0, 3, 1, 2)/255.-.5 
     action = action.reshape(-1, 1) # gather requires same dimensions 
     ## calculate loss 
     pred_prev, pred = model(obs_prev), model(obs) 
@@ -216,6 +240,12 @@ def __get_action(model, single_obs, device):
     action_int = int(torch.argmax(pred_reward, 1)[0]) 
     action_dict = __int_to_game_action(action_int)  
     return action_int, action_dict 
+
+def __format_observation(obs):
+    formatted_obs = {} 
+    if 'pov' in obs:
+        ## TODO move to CNN class, use in `forward`. Avoid code duplication. See `__loss`.  
+    return formatted_obs 
 
 if __name__ == '__main__': 
     rank = hvd.rank() 
