@@ -1,9 +1,4 @@
-
-NUM_EPOCH = 50 
-BATCH_SIZE = 5000
-batch_size_train = 64 
-batch_size_test = 128 
-
+## libs 
 import os 
 import minerl 
 import gym 
@@ -22,6 +17,16 @@ import argparse
 from connectors import pc 
 from ai.util import upload_transition, sample_transitions, \
         __int_to_game_action, write_latest_model, get_latest_model
+
+## params 
+NUM_EPOCH = 50 
+BATCH_SIZE = 5000
+batch_size_train = 64 
+batch_size_test = 128 
+learning_rate = 0.01        
+momentum = 0.5 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+CPU = torch.device('cpu')
 
 parser = argparse.ArgumentParser(description='configure horovod execution') 
 parser.add_argument('--capture-transitions', dest='capture_transitions', default=True, help='send transitions to cassandra')  
@@ -43,8 +48,10 @@ env = gym.make('MineRLNavigateDense-v0')
 hvd.init() 
 
 class CNN(nn.Module):
-    def __init__(self):
-        super(CNN, self).__init__()
+    def __init__(self, default_device=CPU):
+        super(CNN, self).__init__() 
+        # params 
+        self.default_device = default_device 
         # convs 
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, stride=1) 
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1)
@@ -62,7 +69,7 @@ class CNN(nn.Module):
         self.fc2 = nn.Linear(50, 10)
 
     def forward(self, obs): 
-        obs = CNN.__format_observation(obs) 
+        obs = self.__format_observation(obs) 
         x = obs['pov'] 
         x = self.conv1(x) 
         x = F.relu(x) 
@@ -92,11 +99,10 @@ class CNN(nn.Module):
         x = self.fc2(x)
         return x 
     
-    @staticmethod 
-    def __format_observation(obs):
+    def __format_observation(self, obs):
         formatted_obs = {} 
         ## format pov matrix 
-        pov = obs['pov'] 
+        pov = torch.tensor(obs['pov'].copy()) 
         pov = pov.reshape(-1, 64, 64, 3) 
         pov = pov.permute(0, 3, 1, 2)/255.-.5
         formatted_obs['pov'] = pov 
@@ -108,17 +114,16 @@ class CNN(nn.Module):
             if type(obs['compass']) == dict:
                 ## handle the single observation case 
                 obs['compass'] = obs['compass']['angle']
-            vec[0,:] = obs['compass']/180. 
+            vec[0,:] = torch.tensor(obs['compass'].copy()/180.) 
         formatted_obs['vec'] = vec 
+        ## move to default device 
+        formatted_obs['pov'] = formatted_obs['pov'].to(self.default_device) 
+        formatted_obs['vec'] = formatted_obs['vec'].to(self.default_device) 
         return formatted_obs
     pass 
 
 ## create model and optimizer
-learning_rate = 0.01
-momentum = 0.5
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
-CPU = torch.device('cpu') 
-model = CNN() 
+model = CNN(default_device=device) 
 model_path = get_latest_model() 
 if model_path is not None:
     ## load latest model 
@@ -212,9 +217,9 @@ def test(model, device, batch_size=batch_size_test, max_iter_seconds=120., disco
 def __loss(model, device, transition, discount=.99): 
     ## load tensors 
     obs_prev, action, obs, reward, done = transition 
-    obs_prev = obs_prev.to(device) 
+    obs_prev = obs_prev.to(device) ## TODO now a dictionary  
     action = action.to(device) 
-    obs = obs.to(device) 
+    obs = obs.to(device) ## TODO now a dictionary 
     reward = reward.to(device) 
     done = done.to(device) 
     ## shaping data  
@@ -232,7 +237,7 @@ def __get_action(model, single_obs, device):
      - action_int: compact representation, for storage 
      - action_dict: for use by gym 
     '''
-    pred_reward = model(pov) 
+    pred_reward = model(single_obs) 
     action_int = int(torch.argmax(pred_reward, 1)[0]) 
     action_dict = __int_to_game_action(action_int)  
     return action_int, action_dict 

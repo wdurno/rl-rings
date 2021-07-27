@@ -56,8 +56,10 @@ def sample_transitions(n=100):
     for row in rows:
         for col in range(5): 
             if col in [0, 2]: 
-                pov = row[col]['pov'] 
-                compass = row[col]['compass']['angle'] 
+                pov = row[col]['pov']
+                if type(row[col]['compass']) == dict:
+                    row[col]['compass'] = row[col]['compass']['angle'] 
+                compass = row[col]['compass'] 
                 out[col]['pov'].append(pov) 
                 out[col]['compass'].append(compass) 
             else: 
