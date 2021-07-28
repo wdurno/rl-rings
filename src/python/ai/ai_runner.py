@@ -24,7 +24,8 @@ BATCH_SIZE = 5000
 batch_size_train = 128  
 batch_size_test = 128 
 learning_rate = 0.01        
-momentum = 0.5 
+momentum = 0.5
+N_OPS = 10 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
 CPU = torch.device('cpu')
 
@@ -65,8 +66,9 @@ class CNN(nn.Module):
         #dropout layer
         self.conv_drop = nn.Dropout2d()
         #fully connected layer
-        self.fc1 = nn.Linear(4096*1*1+1, 50) # 4096*1*1 for pov matrix, +1 for vec 
-        self.fc2 = nn.Linear(50, 10)
+        self.fc1 = nn.Linear(4096*1*1, 100) 
+        self.fc2 = nn.Linear(100, 20) 
+        self.fc3 = nn.Linear(20+1, N_OPS) # 20 for pov, +1 for vec 
 
     def forward(self, obs): 
         obs = self.__format_observation(obs) 
@@ -91,12 +93,14 @@ class CNN(nn.Module):
         x = F.max_pool2d(x, 2) # returns shape [4096, 1, 1] 
         x = F.relu(x)
         x = x.view(-1, 4096*1*1) 
-        v = obs['vec']
-        x = torch.cat([x, v], dim=1) 
         x = self.fc1(x)
         x = F.relu(x)
         x = F.dropout(x)
         x = self.fc2(x)
+        x = F.relu(x) 
+        v = obs['vec'] 
+        x = torch.cat([x,v], dim=1) 
+        x = self.fc3(x) 
         return x 
     
     def __format_observation(self, obs):
@@ -163,7 +167,7 @@ def train(model, device, optimizer, n_iter=100, discount=.99, \
     return float(loss), n_grads_integrated 
 
 ## define sample function 
-def sample(model, device, max_iter_seconds=60., capture_transitions=True): 
+def sample(model, device, max_iter_seconds=60., capture_transitions=True, prob_random_action=0.): 
     'generate new data using latest model'
     model.eval() 
     obs = env.reset() 
@@ -176,7 +180,8 @@ def sample(model, device, max_iter_seconds=60., capture_transitions=True):
     while continue_iterating: 
         ## shift transition 
         obs_prev = obs 
-        action_int, action_dict = __get_action(model, obs_prev, device) 
+        random_action = np.random.uniform() < prob_random_action
+        action_int, action_dict = __get_action(model, obs_prev, device, random_action=random_action) 
         obs, reward, done, _ = env.step(action_dict) 
         total_reward += reward 
         ## store transition 
@@ -238,14 +243,17 @@ def __loss(model, device, transition, discount=.99):
     err = pred_prev_reward - ((1 - done)*discount*pred_reward + reward) 
     return (err*err).mean() 
 
-def __get_action(model, single_obs, device): 
+def __get_action(model, single_obs, device, random_action=False): 
     '''translate model predictions to actions
     outputs:
      - action_int: compact representation, for storage 
      - action_dict: for use by gym 
     '''
-    pred_reward = model(single_obs) 
-    action_int = int(torch.argmax(pred_reward, 1)[0]) 
+    if random_action:
+        action_int = np.random.choice(N_OPS) 
+    else: 
+        pred_reward = model(single_obs) 
+        action_int = int(torch.argmax(pred_reward, 1)[0]) 
     action_dict = __int_to_game_action(action_int)  
     return action_int, action_dict 
 
@@ -254,7 +262,7 @@ if __name__ == '__main__':
     args = __parse_args() 
     t0 = time() 
     for epoch in range(1, NUM_EPOCH + 1):
-        reward_rate, captured_transitions = sample(model, device, capture_transitions=args.capture_transitions) 
+        reward_rate, captured_transitions = sample(model, device, capture_transitions=args.capture_transitions, prob_random_action=1./(epoch*epoch)) 
         t1 = time() - t0 
         print(f'hvd-{rank}: dt: {t1}, reward_rate: {reward_rate}, transitions_generated: {captured_transitions}') 
         train_loss, grads_integrated = train(model, device, optimizer) 
