@@ -21,7 +21,7 @@ from ai.util import upload_transition, sample_transitions, \
 ## params 
 NUM_EPOCH = 50 
 BATCH_SIZE = 5000
-batch_size_train = 64 
+batch_size_train = 128  
 batch_size_test = 128 
 learning_rate = 0.01        
 momentum = 0.5 
@@ -102,7 +102,9 @@ class CNN(nn.Module):
     def __format_observation(self, obs):
         formatted_obs = {} 
         ## format pov matrix 
-        pov = torch.tensor(obs['pov'].copy()) 
+        pov = obs['pov']
+        if type(pov) == np.ndarray: 
+            pov = torch.tensor(obs['pov'].copy()) 
         pov = pov.reshape(-1, 64, 64, 3) 
         pov = pov.permute(0, 3, 1, 2)/255.-.5
         formatted_obs['pov'] = pov 
@@ -114,7 +116,10 @@ class CNN(nn.Module):
             if type(obs['compass']) == dict:
                 ## handle the single observation case 
                 obs['compass'] = obs['compass']['angle']
-            vec[0,:] = torch.tensor(obs['compass'].copy()/180.) 
+            compass = obs['compass']
+            if type(compass) == np.ndarray: 
+                compass = torch.tensor(compass.copy()) 
+            vec[:,0] = compass/180. 
         formatted_obs['vec'] = vec 
         ## move to default device 
         formatted_obs['pov'] = formatted_obs['pov'].to(self.default_device) 
@@ -153,7 +158,7 @@ def train(model, device, optimizer, n_iter=100, discount=.99, \
         model.to(CPU) # mitigating horovod's gpu driver errors 
         optimizer.step()
         model.to(device)
-        n_grads_integrated += transitions[0].shape[0] ## pov.shape[0] 
+        n_grads_integrated += transitions[0]['pov'].shape[0] ## pov.shape[0] 
         pass
     return float(loss), n_grads_integrated 
 
@@ -217,9 +222,11 @@ def test(model, device, batch_size=batch_size_test, max_iter_seconds=120., disco
 def __loss(model, device, transition, discount=.99): 
     ## load tensors 
     obs_prev, action, obs, reward, done = transition 
-    obs_prev = obs_prev.to(device) ## TODO now a dictionary  
+    obs_prev['pov'] = obs_prev['pov'].to(device) 
+    obs_prev['compass'] = obs_prev['compass'].to(device) 
     action = action.to(device) 
-    obs = obs.to(device) ## TODO now a dictionary 
+    obs['pov'] = obs['pov'].to(device) 
+    obs['compass'] = obs['compass'].to(device) 
     reward = reward.to(device) 
     done = done.to(device) 
     ## shaping data  
