@@ -1,4 +1,8 @@
 
+#### v0.4.1 
+
+Changed to reward-dense game to bootstrap training
+
 #### v0.4.0 
 
 GPUs
