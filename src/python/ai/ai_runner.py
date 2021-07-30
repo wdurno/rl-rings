@@ -175,8 +175,7 @@ def train(model, device, optimizer, n_iter=100, discount=.99, \
     model.train()
     for _ in range(n_iter):
         transitions = sample_transitions(batch_size) 
-        optimizer.zero_grad() 
-        loss = __loss(model, device, transitions, discount=discount) 
+        loss = __loss(model, device, transitions, discount=discount, optimizer=optimizer) 
         loss.backward()
         model.to(CPU) # mitigating horovod's gpu driver errors 
         optimizer.step()
@@ -225,7 +224,7 @@ def sample(model, device, max_iter_seconds=60., capture_transitions=True, prob_r
     return reward_rate, captured_transitions  
 
 ## define test function
-def test(model, device, batch_size=batch_size_test, max_iter_seconds=120., discount=.99):
+def test(model, device, batch_size=batch_size_test, max_iter_seconds=30., discount=.99):
     'evaluate model against test dataset'
     model.eval() 
     losses = [] 
@@ -243,9 +242,20 @@ def test(model, device, batch_size=batch_size_test, max_iter_seconds=120., disco
         return 0.
     return np.mean(losses) 
 
-def __loss(model, device, transition, discount=.99): 
+def __loss(model, device, transitions, discount=.99, optimizer=None): 
+    '''
+    calculates loss
+    inputs:
+     - model: instance of our CNN 
+     - device: GPU or CPU 
+     - transitions: 5-tuple of transition data 
+     - discount: q-learning discount rate 
+     - optimizer: (optimizer) If not None, calculate gradients for optimization
+    outout:
+     - loss: (tensor) 
+    '''
     ## load tensors 
-    obs_prev, action, obs, reward, done = transition 
+    obs_prev, action, obs, reward, done = transitions 
     obs_prev['pov'] = obs_prev['pov'].to(device) 
     obs_prev['compass'] = obs_prev['compass'].to(device) 
     action = action.to(device) 
@@ -256,9 +266,14 @@ def __loss(model, device, transition, discount=.99):
     ## shaping data  
     action = action.reshape(-1, 1) # gather requires same dimensions 
     ## calculate loss 
-    pred_prev, pred = model(obs_prev), model(obs) 
-    pred_prev_reward = pred_prev.gather(1, action) 
+    model.eval() 
+    pred = model(obs)
     pred_reward, _ = pred.max(dim=1) 
+    if optimizer is not None: 
+        model.train() 
+        optimizer.zero_grad() 
+    pred_prev = model(obs_prev) 
+    pred_prev_reward = pred_prev.gather(1, action) 
     err = pred_prev_reward - ((1 - done)*discount*pred_reward + reward) 
     return (err*err).mean() 
 
