@@ -71,7 +71,7 @@ class Sockcom:
         len_idx = message_bytes.find(b'LEN') 
         total_message_length = int(message_bytes[:len_idx].decode()) + len_idx + 3 
         len_covered = len(message_bytes) 
-        message_chunks = [message_bytes[:len_idx + 3]] # drop [ message length ]LEN 
+        message_chunks = [message_bytes[len_idx + 3:]] # drop [ message length ]LEN 
         ## get rest of message 
         while len_covered < total_message_length: 
             clientsocket.settimeout(self.connection_timeout_seconds) 
@@ -92,7 +92,7 @@ if __name__ == '__main__':
     parser.add_argument('--server', action='store_true', default=False, help='run as server, otherwise client') 
     args = parser.parse_args() 
     if args.server: 
-        _ = Sockcom(server_callback=Sockcom.test_func) 
+        _ = Sockcom(server_callback=Sockcom.test_func, batch_size=10) 
     else: 
-        r = Sockcom().send_to_server(b'test') 
+        r = Sockcom(batch_size=10).send_to_server(b'test-test-test') 
         print(r) 
