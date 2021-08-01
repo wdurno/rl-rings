@@ -180,7 +180,7 @@ def train(model, device, optimizer, n_iter=100, discount=.99, \
         model.to(CPU) # mitigating horovod's gpu driver errors 
         optimizer.step()
         model.to(device)
-        n_grads_integrated += transitions[0]['pov'].shape[0] ## pov.shape[0] 
+        n_grads_integrated += transitions[0]['pov'].shape[0]  
         pass
     return float(loss), n_grads_integrated 
 

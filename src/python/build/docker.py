@@ -46,9 +46,9 @@ def __build(root, conf):
     run(cmd3) 
     run(cmd4) 
     ## build 
-    image_name = acr_server + '/' + conf['image_name']
+    image_name = acr_server + '/ai:' + conf['image_tag']
     acr_name = conf['terraform_prefix'] + 'acr'
-    cmd5 = f'kubectl exec -it build -- sh -c "cd /build/docker && docker build -t {image_name} ."' 
+    cmd5 = f'kubectl exec -it build -- sh -c "cd /build/docker/ai && docker build -t {image_name} ."' 
     run(cmd5, os_system=True) 
     ## push 
     cmd6 = f'kubectl exec -it build -- docker login {acr_server} --username {acr_name} --password {acr_token}' 

@@ -4,7 +4,7 @@ def viewer_deploy(root, conf, interactive_mode=True):
     ## get image name 
     cmd1 = f'cat {root}/secret/acr/server'
     acr_server = run(cmd1, return_stdout=True)
-    image_name = acr_server + '/' + conf['image_name'] 
+    image_name = acr_server + '/ai:' + conf['image_tag'] 
     ## apply helm chart with values 
     cmd2 = f'helm upgrade viewer {root}/src/helm/viewer --install '+\
             f'-f {root}/src/helm/viewer/values.yaml '+\

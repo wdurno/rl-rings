@@ -7,6 +7,6 @@ tenant_id: ""
 
 ##defaults 
 terraform_prefix: "RLRings" # alphanumeric characters only 
-image_name: "ai:v0.0.1"
+image_tag: "v1.0.0"
 horovod_instances: 3
 cassandra_instances: 3
