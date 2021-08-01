@@ -30,14 +30,17 @@ class Sockcom:
             serversocket.bind((self.host, self.port)) 
             serversocket.listen(5) 
             while True: 
-                (clientsocket, address) = serversocket.accept() 
-                ## connection recieved, get content 
-                message_bytes = self.__recv(clientsocket) 
-                return_bytes = self.server_callback(message_bytes) 
-                ## send response 
-                self.__send(clientsocket, return_bytes) 
-                ## conversation complete 
-                clientsocket.close() 
+                (clientsocket, address) = serversocket.accept()
+                try: 
+                    ## connection recieved, get content 
+                    message_bytes = self.__recv(clientsocket) 
+                    return_bytes = self.server_callback(message_bytes) 
+                    ## send response 
+                    self.__send(clientsocket, return_bytes) 
+                    ## conversation complete 
+                    clientsocket.close() 
+                except Exception as e: 
+                    print('ERROR: '+str(e)) 
                 pass 
             pass 
         pass 
