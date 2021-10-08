@@ -7,7 +7,7 @@ def deploy_horovod(root, conf):
     ## build image name  
     cmd1 = f'cat {root}/secret/acr/server' 
     acr_server = run(cmd1, return_stdout=True) 
-    image_name = acr_server + '/ai' + conf['image_tag']
+    image_name = acr_server + '/ai:' + conf['image_tag']
     horovod_instances = int(conf['horovod_instances']) 
     ## helm deploy 
     cmd2 = f'helm upgrade --install horovod-ring {root}/src/helm/horovod-ring '+\

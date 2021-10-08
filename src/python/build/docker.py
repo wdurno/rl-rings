@@ -42,7 +42,7 @@ def __build(root, conf):
     acr_token = run(cmd2, return_stdout=True) 
     ## setup build environment 
     cmd3 = f'kubectl exec build -- mkdir -p /build' 
-    cmd4 = f'kubectl cp {root}/docker build:/build/docker && kubectl cp {root}/src build:/build/docker/src' 
+    cmd4 = f'kubectl cp {root}/docker build:/build/docker && kubectl cp {root}/src build:/build/docker/ai/src' 
     run(cmd3) 
     run(cmd4) 
     ## build 
