@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
         - name: horovod-job
-          image: {{ docker_server }}/{{ image_name }} 
+          image: {{ image_name }} 
           env:
             - name: MINIO_ACCESSKEY
               valueFrom:
