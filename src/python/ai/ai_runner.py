@@ -55,48 +55,67 @@ class CNN(nn.Module):
         self.default_device = default_device 
         # convs 
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, stride=1) 
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1)
-        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1)
+        self.conv1_bn = nn.BatchNorm2d(32) 
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1) 
+        self.conv2_bn = nn.BatchNorm2d(64) 
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1) 
+        self.conv3_bn = nn.BatchNorm2d(128) 
         self.conv4 = nn.Conv2d(128, 256, kernel_size=3, stride=2) 
-        # max pool 
+        self.conv4_bn = nn.BatchNorm2d(256) 
         self.conv5 = nn.Conv2d(256, 512, kernel_size=3, stride=1) 
+        self.conv5_bn = nn.BatchNorm2d(512) 
         self.conv6 = nn.Conv2d(512, 1024, kernel_size=3, stride=1) 
+        self.conv6_bn = nn.BatchNorm2d(1024) 
         self.conv7 = nn.Conv2d(1024, 2048, kernel_size=3, stride=1) 
-        self.conv8 = nn.Conv2d(2048, 4096, kernel_size=3, stride=2)
+        self.conv7_bn = nn.BatchNorm2d(2048) 
+        self.conv8 = nn.Conv2d(2048, 4096, kernel_size=3, stride=2) 
+        self.conv8_bn = nn.BatchNorm2d(4096) 
         #dropout layer
         self.conv_drop = nn.Dropout2d()
         #fully connected layer
         self.fc1 = nn.Linear(4096*1*1, 100) 
+        self.fc1_bn = nn.BatchNorm1d(100) 
         self.fc2 = nn.Linear(100, 20) 
+        self.fc2_bn = nn.BatchNorm1d(20) 
         self.fc3 = nn.Linear(20+1, N_OPS) # 20 for pov, +1 for vec 
 
     def forward(self, obs): 
         obs = self.__format_observation(obs) 
         x = obs['pov'] 
         x = self.conv1(x) 
+        x = self.conv1_bn(x) 
         x = F.relu(x) 
         x = self.conv2(x) 
+        x = self.conv2_bn(x) 
         x = F.relu(x) 
         x = self.conv3(x) 
+        x = self.conv3_bn(x) 
         x = F.relu(x) 
         x = self.conv4(x) 
+        x = self.conv4_bn(x) 
         x = F.max_pool2d(x, 2)
         x = F.relu(x) 
         x = self.conv5(x) 
+        x = self.conv5_bn(x) 
         x = F.relu(x) 
         x = self.conv6(x) 
+        x = self.conv6_bn(x) 
         x = F.relu(x) 
         x = self.conv7(x) 
+        x = self.conv7_bn(x) 
         x = F.relu(x) 
-        x = self.conv8(x) # returns shape [4096, 3, 3]
+        x = self.conv8(x) # returns shape [4096, 3, 3] 
+        x = self.conv8_bn(x) 
         x = self.conv_drop(x)
         x = F.max_pool2d(x, 2) # returns shape [4096, 1, 1] 
         x = F.relu(x)
         x = x.view(-1, 4096*1*1) 
-        x = self.fc1(x)
+        x = self.fc1(x) 
+        x = self.fc1_bn(x) 
         x = F.relu(x)
         x = F.dropout(x)
         x = self.fc2(x)
+        x = self.fc2_bn(x) 
         x = F.relu(x) 
         v = obs['vec'] 
         x = torch.cat([x,v], dim=1) 
@@ -156,13 +175,12 @@ def train(model, device, optimizer, n_iter=100, discount=.99, \
     model.train()
     for _ in range(n_iter):
         transitions = sample_transitions(batch_size) 
-        optimizer.zero_grad() 
-        loss = __loss(model, device, transitions, discount=discount) 
+        loss = __loss(model, device, transitions, discount=discount, optimizer=optimizer) 
         loss.backward()
         model.to(CPU) # mitigating horovod's gpu driver errors 
         optimizer.step()
         model.to(device)
-        n_grads_integrated += transitions[0]['pov'].shape[0] ## pov.shape[0] 
+        n_grads_integrated += transitions[0]['pov'].shape[0]  
         pass
     return float(loss), n_grads_integrated 
 
@@ -206,7 +224,7 @@ def sample(model, device, max_iter_seconds=60., capture_transitions=True, prob_r
     return reward_rate, captured_transitions  
 
 ## define test function
-def test(model, device, batch_size=batch_size_test, max_iter_seconds=120., discount=.99):
+def test(model, device, batch_size=batch_size_test, max_iter_seconds=30., discount=.99):
     'evaluate model against test dataset'
     model.eval() 
     losses = [] 
@@ -224,9 +242,20 @@ def test(model, device, batch_size=batch_size_test, max_iter_seconds=120., disco
         return 0.
     return np.mean(losses) 
 
-def __loss(model, device, transition, discount=.99): 
+def __loss(model, device, transitions, discount=.99, optimizer=None): 
+    '''
+    calculates loss
+    inputs:
+     - model: instance of our CNN 
+     - device: GPU or CPU 
+     - transitions: 5-tuple of transition data 
+     - discount: q-learning discount rate 
+     - optimizer: (optimizer) If not None, calculate gradients for optimization
+    outout:
+     - loss: (tensor) 
+    '''
     ## load tensors 
-    obs_prev, action, obs, reward, done = transition 
+    obs_prev, action, obs, reward, done = transitions 
     obs_prev['pov'] = obs_prev['pov'].to(device) 
     obs_prev['compass'] = obs_prev['compass'].to(device) 
     action = action.to(device) 
@@ -237,9 +266,14 @@ def __loss(model, device, transition, discount=.99):
     ## shaping data  
     action = action.reshape(-1, 1) # gather requires same dimensions 
     ## calculate loss 
-    pred_prev, pred = model(obs_prev), model(obs) 
-    pred_prev_reward = pred_prev.gather(1, action) 
+    model.eval() 
+    pred = model(obs)
     pred_reward, _ = pred.max(dim=1) 
+    if optimizer is not None: 
+        model.train() 
+        optimizer.zero_grad() 
+    pred_prev = model(obs_prev) 
+    pred_prev_reward = pred_prev.gather(1, action) 
     err = pred_prev_reward - ((1 - done)*discount*pred_reward + reward) 
     return (err*err).mean() 
 

@@ -63,11 +63,12 @@ def init_storage(root, config):
         docker_server = f.read() 
     ## generate random id 
     rand_id = __random_str()  
-    ## ai image tag from config 
-    image_name = config['image_name']
+    ## ai image tag from config
+    cmd1 = f'cat {root}/secret/acr/server'
+    acr_server = run(cmd1, return_stdout=True)
+    image_name = acr_server + '/ai:' + config['image_tag']
     ## populate 
-    job_yaml = job_template.render(docker_server=docker_server, \
-            rand_id=rand_id, \
+    job_yaml = job_template.render(rand_id=rand_id, \
             image_name=image_name) 
     ## apply 
     cmd1 = 'kubectl apply -f -'
@@ -91,10 +92,11 @@ def run_horovod(root, config):
     ## generate random id 
     rand_id = __random_str() 
     ## ai image tag from config 
-    image_name = config['image_name'] 
+    cmd1 = f'cat {root}/secret/acr/server'
+    acr_server = run(cmd1, return_stdout=True)
+    image_name = acr_server + '/ai:' + config['image_tag']
     ## populate 
-    job_yaml = job_template.render(docker_server=docker_server, \
-            rand_id=rand_id, \
+    job_yaml = job_template.render(rand_id=rand_id, \
             image_name=image_name, \
             replicas=replicas, \
             interactive_debugging_mode=interactive_debugging_mode) 

@@ -42,13 +42,13 @@ def __build(root, conf):
     acr_token = run(cmd2, return_stdout=True) 
     ## setup build environment 
     cmd3 = f'kubectl exec build -- mkdir -p /build' 
-    cmd4 = f'kubectl cp {root}/docker build:/build/docker && kubectl cp {root}/src build:/build/docker/src' 
+    cmd4 = f'kubectl cp {root}/docker build:/build/docker && kubectl cp {root}/src build:/build/docker/ai/src' 
     run(cmd3) 
     run(cmd4) 
     ## build 
-    image_name = acr_server + '/' + conf['image_name']
+    image_name = acr_server + '/ai:' + conf['image_tag']
     acr_name = conf['terraform_prefix'] + 'acr'
-    cmd5 = f'kubectl exec -it build -- sh -c "cd /build/docker && docker build -t {image_name} ."' 
+    cmd5 = f'kubectl exec -it build -- sh -c "cd /build/docker/ai && docker build -t {image_name} ."' 
     run(cmd5, os_system=True) 
     ## push 
     cmd6 = f'kubectl exec -it build -- docker login {acr_server} --username {acr_name} --password {acr_token}' 

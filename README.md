@@ -2,20 +2,30 @@
 
 Goal: Apply meta-learning to MineRL, producing a few-shot learning base-line. Implement with distributed computing, shortening time spent on experiments. Use base-line and fast experiments to study one-shot learning approaches. 
 
+Function: Facilitate reinforcement learning at scale with Horovod on Azure Kubernetes Service (AKS). Store replay memory in a Cassandra ring. Horovod ring iterates between simulation (writing to Cassandra) and model fitting (reading from Cassandra). Uses MineRL as the game. Deep learning implemented with Pytorch. Infrastructure deployed with Terraform on AKS. Everything runs from the Python CLI, only needing a subscription ID (money) and tenant ID (a place to work). 
+
 ## configure
 
-Copy `rl-hypothesis-2-config.sh` to `$HOME` and enter values. 
+Copy `rl-rings-config.sh` to `$HOME` and enter values. 
 
-## steup
+## setup + run
+
+Deploys an AKS cluster, builds with DinD, deploys Kubernetes objects, then runs reinforcement model fitting. 
 
 ```
-bash build.sh --phase-2
+python cli.py 
+```
+
+## help 
+
+```
+python cli.py -h
 ```
 
 ## clean up
 
 ```
-bash build.sh --clean-up
+python cli.py --terraform-destroy 
 ```
 
 ## architecture 

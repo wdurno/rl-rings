@@ -52,7 +52,7 @@ from build.util import init_storage, run_horovod, update_pod_src
 ## parse config path 
 if args.config_path is None: 
     ## setting to default 
-    config_path = os.path.join(args.HOME, 'rl-hypothesis-2-config.yaml') 
+    config_path = os.path.join(args.HOME, 'rl-rings-config.yaml') 
     pass
 
 ## load config 
